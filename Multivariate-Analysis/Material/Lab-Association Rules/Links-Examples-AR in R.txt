@@ -1,0 +1,7 @@
+Links --Examples of Association Rules in R (arules & arulesViz)
+
+https://rpubs.com/Buczman/AssociationRules
+
+Spanish option (check Section FILTRADO DE REGLAS -- RULES FILTERING)
+
+https://rpubs.com/Joaquin_AR/397172

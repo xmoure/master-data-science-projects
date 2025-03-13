@@ -1,0 +1,59 @@
+####
+####Quick Example PCA
+
+help(USArrests)
+db<-(USArrests)
+apply(X = db, MARGIN = 2, FUN = mean)
+apply(X = db, MARGIN = 2, FUN = var)
+
+pca <- prcomp(db, scale = TRUE)
+names(pca)
+
+pca$rotation #(loadings)
+pca$x #scores
+
+
+###Checking Results
+library(ggplot2)
+pca$sdev^2
+prop_varianza <- pca$sdev^2 / sum(pca$sdev^2)
+prop_varianza
+sum(prop_varianza)
+
+ggplot(data = data.frame(prop_varianza, pc = 1:4),
+       aes(x = pc, y = prop_varianza)) +
+  geom_col(width = 0.3) +
+  scale_y_continuous(limits = c(0,1)) +
+  theme_bw() +
+  labs(x = "Principal component",
+       y = "Proportion of explained variance")
+
+prop_varianza_acum <- cumsum(prop_varianza)
+prop_varianza_acum
+
+##########################################
+### USING princomp()
+
+pca1<-princomp(db,cor=TRUE)
+names(pca1)
+
+#########################
+###Eigenvalues
+Eig <- pca$sdev^2
+##Correlation data(variables) and PCA's -- coordinates
+Correl<- cor(db, pca1$scores) ### or
+Correl<-cor(db,pca$x)
+###or by using these function
+####Coordinates
+var_coord_func <- function(loadings, comp.sdev){
+  loadings*comp.sdev
+}
+loadings <- pca$rotation
+sdev <- pca$sdev
+var.coord <- t(apply(loadings, 1, var_coord_func, sdev)) 
+var.coord
+###Quality of variables into PCAs (cos^2)
+Quality<-Correl^2
+
+###Contributions of variables for PCAs
+Contrib<-Quality[,1]/Eig[1] ### Here, contribution of variables in PC1, for other PCi, change 1 to "i" as a number.

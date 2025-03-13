@@ -1,0 +1,16 @@
+library("FactoMineR")
+library("factoextra")
+library("arules")
+db<-poison
+data<-db[,-c(1,2)]
+rdata<-transactions(data)
+itemFrequencyPlot(rdata, support = 0.1, cex.names=0.8)
+rules <- apriori(rdata, parameter = list(support = 0.60, confidence = 0.95))
+rules
+summary(rules)
+inspect(head(rules,by = "confidence"))
+rulessick <- subset(rules, subset = rhs %in% "Sick=Sick_y" & lift > 1.2)
+rulesnotsick <- subset(rules, subset = rhs %in% "Sick=Sick_n")
+inspect(head(rulessick,by = "lift"))
+inspect(head(rulesnotsick))
+write(rulessick, file = "data.csv", sep = ",", col.names = NA)

@@ -1,0 +1,219 @@
+###PLEASE INSTALL THESE PACKAGES / LIBRARIES
+##install.packages(DMwR2)
+##install.packages(missForest)
+##install.packages(mice)
+##install.packages(chemometrics)
+##install.packages(VIM)
+
+###PREPARE YOUR WORK DIRECTORY TO IMPORT DATASET
+
+dd=read.table("C:/Users/DanteConti/Desktop/P1-AMV/Russet_ineqdata.txt",header=T,sep="\t") ####Please read(import) data according to your work directory (place where the
+##### file was saved)
+
+##### DATA
+##The Russet data set. In 1964 Russet tried to find the relation between political 
+##instability of countries and the economical and agricultural inequality. 
+##The collected data refer to 47 countries and 9 variables on the period after
+##the Second World War (1945-1962).
+
+
+# DESCRIPTION OF DATA
+
+print (dd)
+str(dd)
+summary(dd)
+
+##### DETECTING MISSING VALUES
+
+mis_ind = rowSums(is.na(dd))
+m1<-which(mis_ind>0)
+dd[m1,]
+table(mis_ind)
+
+mis_col = colSums(is.na(dd))
+mis_col
+################################
+##LAST CHECK DATA
+
+dd$demo=as.factor(dd$demo)
+str(dd)
+summary(dd)
+
+################## MISSING VALUES --STRATEGIES
+
+# IMPUTATION BY THE KNN
+
+library(DMwR2)
+### https://cran.r-project.org/web/packages/DMwR2/DMwR2.pdf
+### https://ltorgo.github.io/DMwR2/RintroDM.html#data_pre-processing
+
+##dd2<-dd
+##dd2$X<-as.factor(dd2$X)
+
+###https://www.rdocumentation.org/packages/DMwR/versions/0.4.1/topics/knnImputation
+
+dd_imp_knn = knnImputation(dd[,2:9], k=1)
+
+#dd_imp_knn2 = knnImputation(dd2,k=1)
+
+summary(dd_imp_knn)
+summary(dd)
+
+dd[mis_ind>0,]
+dd_imp_knn[mis_ind>0,]
+
+# IMPUTATION BY RANDOM FOREST
+#### https://cran.r-project.org/web/packages/missForest/missForest.pdf
+#### https://rpubs.com/FelipeSantos/na_missforest
+
+library(missForest)
+set.seed(17)
+
+##### https://www.rdocumentation.org/packages/missForest/versions/1.4/topics/missForest
+mf_imp <- missForest(dd[,-c(1)], variablewise=T, verbose=T) 
+summary(mf_imp)
+dd_imp_mf <- mf_imp$ximp
+dd2<-data.frame(dd$X,dd_imp_mf)
+
+dd[mis_ind>0,]
+dd2[mis_ind>0,]
+
+# IMPUTATION BY MICE
+#### https://cran.r-project.org/web/packages/mice/mice.pdf
+#### https://datascienceplus.com/imputing-missing-data-with-r-mice-package/
+
+library(VIM)
+### https://cran.r-project.org/web/packages/VIM/VIM.pdf
+
+aggr_plot <- aggr(dd, col=c('navyblue','red'), numbers=TRUE, sortVars=TRUE, labels=names(dd), cex.axis=.7, gap=3, ylab=c("Histogram of missing data","Pattern"))
+
+k=1
+set.seed(17)
+library(mice)
+
+####https://www.rdocumentation.org/packages/mice/versions/3.13.0/topics/mice
+
+imp=mice(dd,m=k)
+dd_imp=complete(imp, action="long")
+dim(dd)
+dim(dd_imp)
+summary(dd_imp)
+densityplot(imp)
+
+#####Briefing
+
+dd[mis_ind>0,]
+dd_imp[mis_ind>0,]
+dd_imp_knn[mis_ind>0,]
+dd_imp_mf[mis_ind>0,]
+
+##############OUTLIERS DETECTION#############
+
+
+X = dd_imp[,4:11]  
+names(X)
+
+# DETECTING UNIVARIATE OUTLIERS
+#https://statsandr.com/blog/outliers-detection-in-r/
+
+boxplot(X)
+boxplot.stats(X$Death)$out
+out <- boxplot.stats(X$Death)$out
+out_ind <- which(X$Death %in% c(out))
+out_ind
+Y<- data.frame(X[out_ind, ],dd[out_ind,1])
+
+# DETECTING MULTIVARIATE OUTLIERS WITH MAHALANOBIS DSTANCE
+#### https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/mahalanobis
+
+mdi = mahalanobis(X,center=apply(X,2,mean),cov=var(X))
+plot(density(mdi))
+cutoff <- qchisq(p = 0.99 , ncol(X))
+## Display observation whose distance greater than cutoff value
+X[mdi>cutoff,]
+#Z<-data.frame(X[mdi>cutoff,],dd[mdi>cutoff,1]
+
+
+###ALTERNATIVE 
+X2 = X
+h = round(nrow(X)*0.75)
+eps = 0.000001
+dif_cent=1
+i = 0
+
+while (dif_cent>eps) {
+i = i + 1
+mean = apply(X2,2,mean)
+md2 = mahalanobis(X,center=mean,cov=var(X2))
+in_md2=order(md2)
+X2 = X[in_md2[1:h],]
+dif_cent=sum((mean-apply(X2,2,mean))^2)}
+
+plot(density(md2),col="orange")
+lines(density(mdi))
+
+qchisq(0.99, ncol(X))
+
+plot(mdi,md2,type="n",xlab="Original Mahalanobis distance",ylab="Robust Mahalanobis distance")
+text(mdi,md2,labels=rownames(dd))
+
+lim=qchisq(0.99, ncol(X))
+X[md2>lim,]
+
+#####library(MVN) optional --->https://cran.r-project.org/web/packages/MVN/MVN.pdf
+## mvnoutliers = mvn(X, multivariateOutlierMethod = "adj",showOutliers = TRUE, showNewData = TRUE)
+## mvnoutliers$multivariateOutliers
+## c<-mvnoutliers$multivariateOutliers[,1]
+## mvnoutliers$newData
+
+# DETECTING MULTIVARIATE OUTLIERS USING Moutlier function
+### https://cran.r-project.org/web/packages/chemometrics/chemometrics.pdf
+
+library(chemometrics)
+dis <- Moutlier(X, quantile = 0.99, plot=FALSE)
+#par(mfrow=c(1,1))
+plot(dis$md,dis$rd, type="n")
+text(dis$md,dis$rd,labels=rownames(dd))
+a<-which(dis$md > dis$cutoff)
+
+cut<-rep(dis$cutoff,nrows(X))
+plot(dis$md)
+lines(cut,col=2)
+
+plot(dis$rd)
+lines(cut,col=2)
+b<-which(dis$rd>dis$cutoff)
+
+# DETECTING MULTIVARIATE OUTLIERS BY DENSITY OF LOCAL DISTANCES
+### https://www.rdocumentation.org/packages/DMwR/versions/0.4.1/topics/lofactor
+
+outlier.scores <- lofactor(X, k=5)
+plot(density(outlier.scores))
+
+# pick top 3 outliers
+outliers <- order(outlier.scores, decreasing=T)[1:3]
+sort(outlier.scores,decreasing=T)[1:3]
+# who are outliers
+print(dd_imp[outliers,2:3])
+
+###https://www.rdatamining.com/examples/outlier-detection
+X = dd_imp[,4:11]
+n <- nrow(X)
+pch <- rep(".", n)
+pch[outliers] <- "+"
+col <- rep("black", n)
+col[outliers] <- "red"
+pairs(X, pch=pch, col=col)
+
+
+####library(Rlof)
+##### https://cran.r-project.org/web/packages/Rlof/Rlof.pdf
+outlier.scores <- lof(X, k=5)
+# try with different number of neighbors (k = 5,6,7,8,9 and 10)
+outlier.scores <- lof(X, k=c(5:10))
+
+######## http://ropatics.com/data-mining/r-and-data-mining/RDM-Outlier_Detection.html
+######## https://rstudio-pubs-static.s3.amazonaws.com/216270_ccd62999b6504c22a390bb39fee22f39.html
+######## https://cran.r-project.org/web/packages/outForest/vignettes/outRanger.html
+######## https://www.kaggle.com/norealityshows/outlier-detection-with-isolation-forest-in-r
+######## https://rpubs.com/Joaquin_AR/614976 ---->(Spanish)

@@ -1,0 +1,10 @@
+https://joanby.github.io/estadistica-inferencial/Tema-9---Clustering#105 (Spanish)
+https://towardsdatascience.com/a-little-known-trick-in-hierarchical-clustering-weights-762156a2fce0
+
+
+****USEFUL LINKS
+
+https://rpubs.com/ranvirkumarsah/Intro2Clustering
+https://rpubs.com/pg2000in/OptimumClusters
+https://rpubs.com/Joaquin_AR/310338  (in Spanish)
+https://rquer.netlify.app/data_analysi/clustering (in Spanish)
