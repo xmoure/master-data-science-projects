@@ -1,0 +1,153 @@
+neighborhood,district,propertyType,#properties
+Sant Gervasi – Galvany,Sarrià-Sant Gervasi,flat,389
+Sant Gervasi – Galvany,Sarrià-Sant Gervasi,penthouse,66
+Sant Gervasi – Galvany,Sarrià-Sant Gervasi,duplex,10
+Sant Gervasi – Galvany,Sarrià-Sant Gervasi,studio,5
+La Marina de Port,Sants-Montjuïc,flat,348
+La Marina de Port,Sants-Montjuïc,chalet,7
+La Marina de Port,Sants-Montjuïc,penthouse,19
+La Marina de Port,Sants-Montjuïc,duplex,44
+La Marina de Port,Sants-Montjuïc,studio,3
+"""El Poble-sec, Barcelona""",Sants-Montjuïc,flat,321
+"""El Poble-sec, Barcelona""",Sants-Montjuïc,penthouse,32
+"""El Poble-sec, Barcelona""",Sants-Montjuïc,duplex,9
+"""El Poble-sec, Barcelona""",Sants-Montjuïc,chalet,2
+"""El Poble-sec, Barcelona""",Sants-Montjuïc,studio,5
+La Marina del Prat Vermell,Sants-Montjuïc,flat,23
+La Marina del Prat Vermell,Sants-Montjuïc,chalet,1
+La Marina del Prat Vermell,Sants-Montjuïc,studio,1
+El Putxet i el Farró,Sarrià-Sant Gervasi,flat,197
+El Putxet i el Farró,Sarrià-Sant Gervasi,duplex,26
+El Putxet i el Farró,Sarrià-Sant Gervasi,chalet,21
+El Putxet i el Farró,Sarrià-Sant Gervasi,studio,1
+El Putxet i el Farró,Sarrià-Sant Gervasi,penthouse,4
+Sarrià,Sarrià-Sant Gervasi,chalet,102
+Sarrià,Sarrià-Sant Gervasi,flat,98
+Sarrià,Sarrià-Sant Gervasi,penthouse,13
+Sarrià,Sarrià-Sant Gervasi,countryHouse,1
+Sarrià,Sarrià-Sant Gervasi,duplex,1
+Sant Gervasi – la Bonanova,Sarrià-Sant Gervasi,flat,281
+Sant Gervasi – la Bonanova,Sarrià-Sant Gervasi,penthouse,23
+Sant Gervasi – la Bonanova,Sarrià-Sant Gervasi,chalet,112
+Sant Gervasi – la Bonanova,Sarrià-Sant Gervasi,duplex,4
+Les Tres Torres,Sarrià-Sant Gervasi,flat,125
+Les Tres Torres,Sarrià-Sant Gervasi,chalet,15
+Les Tres Torres,Sarrià-Sant Gervasi,penthouse,7
+Pedralbes,Les Corts,flat,145
+Pedralbes,Les Corts,chalet,28
+Pedralbes,Les Corts,duplex,14
+Pedralbes,Les Corts,penthouse,16
+Les Corts,Les Corts,flat,374
+Les Corts,Les Corts,duplex,11
+Les Corts,Les Corts,penthouse,6
+Les Corts,Les Corts,studio,5
+"""Vallvidrera, el Tibidabo i les Planes""",Sarrià-Sant Gervasi,chalet,154
+"""Vallvidrera, el Tibidabo i les Planes""",Sarrià-Sant Gervasi,penthouse,7
+"""Vallvidrera, el Tibidabo i les Planes""",Sarrià-Sant Gervasi,flat,32
+La Maternitat i Sant Ramon,Les Corts,flat,323
+La Maternitat i Sant Ramon,Les Corts,penthouse,35
+La Maternitat i Sant Ramon,Les Corts,duplex,11
+La Maternitat i Sant Ramon,Les Corts,chalet,3
+Vila de Gràcia,Gràcia,chalet,23
+Vila de Gràcia,Gràcia,penthouse,7
+Vila de Gràcia,Gràcia,flat,120
+Vila de Gràcia,Gràcia,duplex,2
+Vallcarca i els Penitents,Gràcia,flat,63
+Vallcarca i els Penitents,Gràcia,penthouse,14
+Vallcarca i els Penitents,Gràcia,duplex,1
+Vallcarca i els Penitents,Gràcia,chalet,1
+La Salut,Gràcia,duplex,13
+La Salut,Gràcia,studio,4
+La Salut,Gràcia,flat,15
+La Salut,Gràcia,penthouse,3
+el Coll,Gràcia,flat,7
+Sant Genís dels Agudells,Horta-Guinardó,flat,29
+Sant Genís dels Agudells,Horta-Guinardó,penthouse,1
+Sant Genís dels Agudells,Horta-Guinardó,chalet,3
+Sant Genís dels Agudells,Horta-Guinardó,duplex,1
+La Bordeta,Sants-Montjuïc,flat,367
+La Bordeta,Sants-Montjuïc,chalet,12
+La Bordeta,Sants-Montjuïc,penthouse,25
+La Bordeta,Sants-Montjuïc,studio,6
+La Bordeta,Sants-Montjuïc,duplex,5
+Sants,Sants-Montjuïc,penthouse,18
+Sants,Sants-Montjuïc,flat,392
+Sants,Sants-Montjuïc,chalet,28
+Sants,Sants-Montjuïc,studio,8
+Sants,Sants-Montjuïc,duplex,15
+La Font de la Guatlla,Sants-Montjuïc,flat,199
+La Font de la Guatlla,Sants-Montjuïc,penthouse,32
+La Font de la Guatlla,Sants-Montjuïc,chalet,9
+La Font de la Guatlla,Sants-Montjuïc,duplex,11
+Hostafrancs,Sants-Montjuïc,flat,124
+Hostafrancs,Sants-Montjuïc,penthouse,11
+Hostafrancs,Sants-Montjuïc,duplex,6
+Hostafrancs,Sants-Montjuïc,studio,4
+La Teixonera,Horta-Guinardó,flat,27
+L'Antiga Esquerra de l'Eixample,Eixample,flat,228
+La Nova Esquerra de l'Eixample,Eixample,flat,395
+La Nova Esquerra de l'Eixample,Eixample,penthouse,51
+La Nova Esquerra de l'Eixample,Eixample,studio,5
+La Nova Esquerra de l'Eixample,Eixample,duplex,6
+Sant Antoni,Eixample,penthouse,28
+Sant Antoni,Eixample,flat,236
+Sant Antoni,Eixample,chalet,1
+Sant Antoni,Eixample,duplex,1
+El Raval,Ciutat Vella,flat,175
+El Raval,Ciutat Vella,penthouse,14
+El Raval,Ciutat Vella,studio,11
+Vall d'Hebron,Horta-Guinardó,flat,10
+"""Horta, Barcelona""",Horta-Guinardó,flat,15
+Canyelles,Nou Barris,flat,2
+Ciutat Meridiana,Nou Barris,flat,2
+Ciutat Meridiana,Nou Barris,penthouse,1
+Ciutat Meridiana,Nou Barris,chalet,1
+Sants-Badal,Sants-Montjuïc,flat,260
+Sants-Badal,Sants-Montjuïc,duplex,3
+Sants-Badal,Sants-Montjuïc,studio,6
+Sants-Badal,Sants-Montjuïc,penthouse,7
+Sants-Badal,Sants-Montjuïc,chalet,2
+Dreta de l'Eixample,Eixample,flat,570
+Dreta de l'Eixample,Eixample,duplex,27
+Dreta de l'Eixample,Eixample,penthouse,30
+Dreta de l'Eixample,Eixample,studio,2
+Dreta de l'Eixample,Eixample,chalet,1
+Fort Pienc,Eixample,flat,2
+"""Sant Pere, Santa Caterina i la Ribera""",Ciutat Vella,flat,81
+"""Sant Pere, Santa Caterina i la Ribera""",Ciutat Vella,studio,4
+"""Sant Pere, Santa Caterina i la Ribera""",Ciutat Vella,penthouse,3
+"""Sant Pere, Santa Caterina i la Ribera""",Ciutat Vella,duplex,2
+Camp d'en Grassot i Gràcia Nova,Gràcia,flat,76
+Camp d'en Grassot i Gràcia Nova,Gràcia,penthouse,2
+Camp d'en Grassot i Gràcia Nova,Gràcia,chalet,17
+La Font d'en Fargues,Horta-Guinardó,chalet,5
+La Font d'en Fargues,Horta-Guinardó,flat,3
+Can Baró,Horta-Guinardó,chalet,13
+Can Baró,Horta-Guinardó,flat,10
+Can Baró,Horta-Guinardó,penthouse,12
+Gothic Quarter,Ciutat Vella,penthouse,14
+Gothic Quarter,Ciutat Vella,flat,272
+Gothic Quarter,Ciutat Vella,studio,14
+Gothic Quarter,Ciutat Vella,duplex,13
+El Carmel,Horta-Guinardó,chalet,5
+El Carmel,Horta-Guinardó,flat,21
+El Carmel,Horta-Guinardó,penthouse,2
+El Baix Guinardó,Horta-Guinardó,flat,39
+Sagrada Família,Eixample,flat,6
+Sagrada Família,Eixample,studio,2
+Vilapicina i la Torre Llobeta,Nou Barris,penthouse,2
+Vilapicina i la Torre Llobeta,Nou Barris,flat,2
+Can Peguera,Nou Barris,flat,7
+El Guinardó,Horta-Guinardó,flat,9
+El Guinardó,Horta-Guinardó,duplex,2
+El Congrés i els Indians,Sant Andreu,flat,1
+Trinitat Vella,Sant Andreu,flat,6
+Trinitat Vella,Sant Andreu,penthouse,1
+Sant Andreu de Palomar,Sant Andreu,penthouse,2
+Navas,Sant Andreu,flat,1
+La Prosperitat,Nou Barris,flat,7
+Les Roquetes,Nou Barris,flat,4
+Porta,Nou Barris,flat,12
+El Camp de l'Arpa del Clot,Sant Martí,flat,1
+Verdun,Nou Barris,flat,4
+La Trinitat Nova,Nou Barris,flat,1

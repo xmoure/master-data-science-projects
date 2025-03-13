@@ -1,0 +1,15 @@
+ We separated all the different parts of the project in different notebooks. In order to run it you can follow the name convention. The name of the notebook starts with a number which indicates its position, from 1 to 11.
+The following is the order:
+1:  1_data_quality_assesement
+2: 2_data_cleaning_general
+3: 3_data_cleaning_missing_data
+4: 4_data_cleaning_outlier_detection
+5: 5_new_features_derivation
+6: 6_feature_extraction
+7: 7_decisionTree_randomForst_regression
+8: 8:_neural_network
+9: 9_Multivariate_Polynomial_Regression
+10: 10_SVR
+11: 11_decisionTree_randomForest_classification
+
+You need to change the location of the folder where the dataset is in each notebook. And some of the notebooks need the folder created on the previous notebook. You can find attached a folder with all the data generated so you don not have to run every preprocessing step.\

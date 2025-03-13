@@ -1,0 +1,781 @@
+neighborhood,district,culturalType,#culturalPlaces
+Fort Pienc,Eixample,Biblioteques,4
+Fort Pienc,Eixample,Biblioteques municipals,2
+Fort Pienc,Eixample,Sales d'estudi,1
+Fort Pienc,Eixample,Casals i espais per a joves,2
+Fort Pienc,Eixample,Centres cívics,1
+Fort Pienc,Eixample,WiFi BCN,4
+Fort Pienc,Eixample,Interiors d'illa,6
+Fort Pienc,Eixample,Parcs i jardins,9
+Fort Pienc,Eixample,Teatres,5
+Fort Pienc,Eixample,Auditoris,1
+Fort Pienc,Eixample,Discoteques,1
+Fort Pienc,Eixample,Salons de ball,1
+Fort Pienc,Eixample,Casals d'avis,2
+Fort Pienc,Eixample,Casals infantils,1
+Fort Pienc,Eixample,Àrees de jocs infantils,15
+Fort Pienc,Eixample,Cocteleries,1
+Fort Pienc,Eixample,Xampanyeries,1
+Fort Pienc,Eixample,Restaurants,3
+Fort Pienc,Eixample,Museus,1
+Fort Pienc,Eixample,Museus municipals,1
+Fort Pienc,Eixample,Karaokes,1
+Fort Pienc,Eixample,Tablaos flamencs,1
+Fort Pienc,Eixample,Casals de barri,1
+Fort Pienc,Eixample,Arxius municipals,1
+Sagrada Família,Eixample,Interiors d'illa,6
+Sagrada Família,Eixample,Parcs i jardins,9
+Sagrada Família,Eixample,Casals d'avis,4
+Sagrada Família,Eixample,Àrees de jocs infantils,15
+Sagrada Família,Eixample,WiFi BCN,2
+Sagrada Família,Eixample,Casals de barri,2
+Sagrada Família,Eixample,Centres cívics,1
+Sagrada Família,Eixample,Bars i pubs musicals,2
+Sagrada Família,Eixample,Cocteleries,3
+Sagrada Família,Eixample,Xampanyeries,3
+Sagrada Família,Eixample,Restaurants,1
+Sagrada Família,Eixample,Teatres,4
+Sagrada Família,Eixample,Discoteques,1
+Sagrada Família,Eixample,Museus,1
+Sagrada Família,Eixample,Biblioteques,2
+Sagrada Família,Eixample,Casals infantils,1
+Sagrada Família,Eixample,Biblioteques municipals,1
+Sagrada Família,Eixample,Sales d'estudi,1
+Baró de Viver,Sant Andreu,Casals i espais per a joves,1
+Baró de Viver,Sant Andreu,Casals infantils,1
+Baró de Viver,Sant Andreu,Àrees de jocs infantils,3
+Baró de Viver,Sant Andreu,Parcs i jardins,1
+Baró de Viver,Sant Andreu,Casals d'avis,1
+Baró de Viver,Sant Andreu,Centres cívics,1
+Baró de Viver,Sant Andreu,WiFi BCN,1
+Sant Martí de Provençals,Sant Martí,Auditoris,1
+Sant Martí de Provençals,Sant Martí,WiFi BCN,4
+Sant Martí de Provençals,Sant Martí,Àrees de jocs infantils,13
+Sant Martí de Provençals,Sant Martí,Casals d'avis,5
+Sant Martí de Provençals,Sant Martí,Bancs del Temps,1
+Sant Martí de Provençals,Sant Martí,Parcs i jardins,2
+Sant Martí de Provençals,Sant Martí,Casals infantils,1
+Sant Martí de Provençals,Sant Martí,Centres cívics,1
+Sant Martí de Provençals,Sant Martí,Biblioteques,1
+Sant Martí de Provençals,Sant Martí,Biblioteques municipals,1
+Sant Martí de Provençals,Sant Martí,Sales d'estudi,1
+El Poblenou,Sant Martí,Àrees de jocs infantils,16
+El Poblenou,Sant Martí,Museus,1
+El Poblenou,Sant Martí,Casals d'avis,3
+El Poblenou,Sant Martí,Casals de barri,3
+El Poblenou,Sant Martí,WiFi BCN,6
+El Poblenou,Sant Martí,Sales d'estudi,2
+El Poblenou,Sant Martí,Teatres,4
+El Poblenou,Sant Martí,Discoteques,2
+El Poblenou,Sant Martí,Cocteleries,1
+El Poblenou,Sant Martí,Xampanyeries,1
+El Poblenou,Sant Martí,Parcs i jardins,7
+El Poblenou,Sant Martí,Bancs del Temps,1
+El Poblenou,Sant Martí,Biblioteques,1
+El Poblenou,Sant Martí,Biblioteques municipals,1
+El Poblenou,Sant Martí,Sales de festes,1
+El Poblenou,Sant Martí,Bars i pubs musicals,1
+El Poblenou,Sant Martí,Centres cívics,1
+Camp d'en Grassot i Gràcia Nova,Gràcia,Casals infantils,1
+Camp d'en Grassot i Gràcia Nova,Gràcia,Parcs i jardins,3
+Camp d'en Grassot i Gràcia Nova,Gràcia,Àrees de jocs infantils,4
+Camp d'en Grassot i Gràcia Nova,Gràcia,Centres cívics,1
+Camp d'en Grassot i Gràcia Nova,Gràcia,WiFi BCN,1
+Camp d'en Grassot i Gràcia Nova,Gràcia,Casals d'avis,1
+Camp d'en Grassot i Gràcia Nova,Gràcia,Teatres,1
+Camp d'en Grassot i Gràcia Nova,Gràcia,Casals i espais per a joves,1
+Camp d'en Grassot i Gràcia Nova,Gràcia,Biblioteques,1
+Camp d'en Grassot i Gràcia Nova,Gràcia,Discoteques,1
+Camp d'en Grassot i Gràcia Nova,Gràcia,Karaokes,1
+Vallcarca i els Penitents,Gràcia,Àrees de jocs infantils,9
+Vallcarca i els Penitents,Gràcia,Sales d'estudi,3
+Vallcarca i els Penitents,Gràcia,Arxius municipals,1
+Vallcarca i els Penitents,Gràcia,Biblioteques,2
+Vallcarca i els Penitents,Gràcia,Biblioteques municipals,2
+Vallcarca i els Penitents,Gràcia,WiFi BCN,2
+Vallcarca i els Penitents,Gràcia,Casals d'avis,2
+Vallcarca i els Penitents,Gràcia,Parcs i jardins,4
+Vallcarca i els Penitents,Gràcia,Interiors d'illa,1
+Vallcarca i els Penitents,Gràcia,Casals de barri,1
+Vila de Gràcia,Gràcia,Cocteleries,13
+Vila de Gràcia,Gràcia,Xampanyeries,13
+Vila de Gràcia,Gràcia,Teatres,20
+Vila de Gràcia,Gràcia,Bars i pubs musicals,21
+Vila de Gràcia,Gràcia,Biblioteques,4
+Vila de Gràcia,Gràcia,Cinemes,3
+Vila de Gràcia,Gràcia,Discoteques,4
+Vila de Gràcia,Gràcia,Casals i espais per a joves,1
+Vila de Gràcia,Gràcia,WiFi BCN,4
+Vila de Gràcia,Gràcia,Salons de ball,1
+Vila de Gràcia,Gràcia,Casals d'avis,4
+Vila de Gràcia,Gràcia,Parcs i jardins,3
+Vila de Gràcia,Gràcia,Museus,1
+Vila de Gràcia,Gràcia,Auditoris,1
+Vila de Gràcia,Gràcia,Biblioteques municipals,1
+Vila de Gràcia,Gràcia,Sales d'estudi,1
+Vila de Gràcia,Gràcia,Restaurants,1
+Vila de Gràcia,Gràcia,Ateneus de fabricació,1
+Vila de Gràcia,Gràcia,Altres esports,1
+Vila de Gràcia,Gràcia,Instal·lacions esportives,1
+Vila de Gràcia,Gràcia,Zones de joc,1
+Vila de Gràcia,Gràcia,Àrees de jocs infantils,11
+La Nova Esquerra de l'Eixample,Eixample,Sales d'estudi,3
+La Nova Esquerra de l'Eixample,Eixample,Centres cívics,2
+La Nova Esquerra de l'Eixample,Eixample,Àrees de jocs infantils,22
+La Nova Esquerra de l'Eixample,Eixample,Bars i pubs musicals,4
+La Nova Esquerra de l'Eixample,Eixample,Karaokes,1
+La Nova Esquerra de l'Eixample,Eixample,Biblioteques,9
+La Nova Esquerra de l'Eixample,Eixample,Casals i espais per a joves,1
+La Nova Esquerra de l'Eixample,Eixample,Interiors d'illa,8
+La Nova Esquerra de l'Eixample,Eixample,Parcs i jardins,11
+La Nova Esquerra de l'Eixample,Eixample,Teatres,1
+La Nova Esquerra de l'Eixample,Eixample,Casals d'avis,2
+La Nova Esquerra de l'Eixample,Eixample,Biblioteques municipals,2
+La Nova Esquerra de l'Eixample,Eixample,Discoteques,3
+La Nova Esquerra de l'Eixample,Eixample,Cocteleries,3
+La Nova Esquerra de l'Eixample,Eixample,Xampanyeries,3
+La Nova Esquerra de l'Eixample,Eixample,Cinemes,1
+La Nova Esquerra de l'Eixample,Eixample,WiFi BCN,3
+La Nova Esquerra de l'Eixample,Eixample,Casals infantils,1
+La Nova Esquerra de l'Eixample,Eixample,Tablaos flamencs,1
+La Nova Esquerra de l'Eixample,Eixample,Restaurants,1
+La Nova Esquerra de l'Eixample,Eixample,Salons de ball,1
+El Besòs i el Maresme,Sant Martí,Parcs i jardins,5
+El Besòs i el Maresme,Sant Martí,Àrees de jocs infantils,37
+El Besòs i el Maresme,Sant Martí,Casals de barri,1
+El Besòs i el Maresme,Sant Martí,Biblioteques,1
+El Besòs i el Maresme,Sant Martí,Biblioteques municipals,1
+El Besòs i el Maresme,Sant Martí,Sales d'estudi,2
+El Besòs i el Maresme,Sant Martí,Casals infantils,1
+El Besòs i el Maresme,Sant Martí,Teatres,1
+El Besòs i el Maresme,Sant Martí,Casals d'avis,1
+El Besòs i el Maresme,Sant Martí,WiFi BCN,2
+El Besòs i el Maresme,Sant Martí,Centres cívics,1
+El Besòs i el Maresme,Sant Martí,Museus,1
+El Besòs i el Maresme,Sant Martí,Museus municipals,1
+Sants,Sants-Montjuïc,Àrees de jocs infantils,11
+Sants,Sants-Montjuïc,Parcs i jardins,6
+Sants,Sants-Montjuïc,Casals i espais per a joves,1
+Sants,Sants-Montjuïc,Discoteques,3
+Sants,Sants-Montjuïc,Biblioteques,4
+Sants,Sants-Montjuïc,Biblioteques municipals,1
+Sants,Sants-Montjuïc,Sales d'estudi,3
+Sants,Sants-Montjuïc,Teatres,2
+Sants,Sants-Montjuïc,Centres cívics,1
+Sants,Sants-Montjuïc,WiFi BCN,3
+Sants,Sants-Montjuïc,Auditoris,1
+Sants,Sants-Montjuïc,Casals d'avis,3
+Sants,Sants-Montjuïc,Bars i pubs musicals,6
+Sants,Sants-Montjuïc,Karaokes,1
+Canyelles,Nou Barris,Àrees de jocs infantils,5
+Canyelles,Nou Barris,Parcs i jardins,1
+Canyelles,Nou Barris,Casals d'avis,1
+Canyelles,Nou Barris,WiFi BCN,1
+Canyelles,Nou Barris,Biblioteques,1
+Canyelles,Nou Barris,Biblioteques municipals,1
+Canyelles,Nou Barris,Sales d'estudi,1
+Canyelles,Nou Barris,Casals infantils,1
+El Baix Guinardó,Horta-Guinardó,Parcs i jardins,3
+El Baix Guinardó,Horta-Guinardó,Biblioteques,1
+El Baix Guinardó,Horta-Guinardó,Biblioteques municipals,1
+El Baix Guinardó,Horta-Guinardó,Sales d'estudi,2
+El Baix Guinardó,Horta-Guinardó,Casals d'avis,1
+El Baix Guinardó,Horta-Guinardó,WiFi BCN,2
+El Baix Guinardó,Horta-Guinardó,Àrees de jocs infantils,5
+El Baix Guinardó,Horta-Guinardó,Arxius municipals,1
+Verdun,Nou Barris,Àrees de jocs infantils,4
+Verdun,Nou Barris,Casals de barri,1
+Verdun,Nou Barris,WiFi BCN,1
+Verdun,Nou Barris,Casals d'avis,2
+La Font de la Guatlla,Sants-Montjuïc,Museus,1
+La Font de la Guatlla,Sants-Montjuïc,Àrees de jocs infantils,3
+La Font de la Guatlla,Sants-Montjuïc,Centres cívics,1
+La Font de la Guatlla,Sants-Montjuïc,WiFi BCN,1
+La Font de la Guatlla,Sants-Montjuïc,Parcs i jardins,1
+La Trinitat Nova,Nou Barris,Casals d'avis,2
+La Trinitat Nova,Nou Barris,Casals infantils,1
+La Trinitat Nova,Nou Barris,Casals de barri,1
+La Trinitat Nova,Nou Barris,Àrees de jocs infantils,4
+La Trinitat Nova,Nou Barris,Parcs i jardins,1
+La Trinitat Nova,Nou Barris,WiFi BCN,1
+La Trinitat Nova,Nou Barris,Cinemes,1
+La Teixonera,Horta-Guinardó,Parcs i jardins,1
+La Teixonera,Horta-Guinardó,Casals d'avis,1
+La Teixonera,Horta-Guinardó,Àrees de jocs infantils,9
+La Teixonera,Horta-Guinardó,Casals infantils,1
+La Teixonera,Horta-Guinardó,Centres cívics,1
+La Teixonera,Horta-Guinardó,WiFi BCN,1
+Torre Baró,Nou Barris,Casals infantils,1
+Torre Baró,Nou Barris,Biblioteques,1
+Torre Baró,Nou Barris,Biblioteques municipals,1
+Torre Baró,Nou Barris,Sales d'estudi,1
+Torre Baró,Nou Barris,Àrees de jocs infantils,5
+Torre Baró,Nou Barris,Casals de barri,1
+Torre Baró,Nou Barris,WiFi BCN,1
+Sants-Badal,Sants-Montjuïc,Àrees de jocs infantils,1
+Sants-Badal,Sants-Montjuïc,Casals d'avis,1
+El Raval,Ciutat Vella,Parcs i jardins,8
+El Raval,Ciutat Vella,Biblioteques,21
+El Raval,Ciutat Vella,Arxius municipals,1
+El Raval,Ciutat Vella,Bars i pubs musicals,23
+El Raval,Ciutat Vella,Cocteleries,16
+El Raval,Ciutat Vella,Xampanyeries,16
+El Raval,Ciutat Vella,Àrees de jocs infantils,11
+El Raval,Ciutat Vella,Discoteques,4
+El Raval,Ciutat Vella,Tablaos flamencs,2
+El Raval,Ciutat Vella,Restaurants,4
+El Raval,Ciutat Vella,Teatres,18
+El Raval,Ciutat Vella,Auditoris,5
+El Raval,Ciutat Vella,WiFi BCN,6
+El Raval,Ciutat Vella,Casals i espais per a joves,6
+El Raval,Ciutat Vella,Sales d'estudi,3
+El Raval,Ciutat Vella,Biblioteques municipals,2
+El Raval,Ciutat Vella,Museus,3
+El Raval,Ciutat Vella,Museus municipals,2
+El Raval,Ciutat Vella,Cinemes,2
+El Raval,Ciutat Vella,Casals d'avis,3
+El Raval,Ciutat Vella,Interiors d'illa,1
+El Raval,Ciutat Vella,Centres cívics,1
+El Raval,Ciutat Vella,Sales de festes,1
+El Raval,Ciutat Vella,Altres esports,1
+El Raval,Ciutat Vella,Instal·lacions esportives,1
+El Raval,Ciutat Vella,Salons de ball,1
+El Raval,Ciutat Vella,Casals de barri,1
+El Raval,Ciutat Vella,Casals infantils,1
+El Clot,Sant Martí,Casals d'avis,2
+El Clot,Sant Martí,WiFi BCN,4
+El Clot,Sant Martí,Àrees de jocs infantils,23
+El Clot,Sant Martí,Bancs del Temps,1
+El Clot,Sant Martí,Centres cívics,1
+El Clot,Sant Martí,Parcs i jardins,3
+El Clot,Sant Martí,Casals i espais per a joves,1
+El Clot,Sant Martí,Teatres,2
+La Salut,Gràcia,Àrees de jocs infantils,4
+La Salut,Gràcia,Casals de barri,1
+La Salut,Gràcia,Casals d'avis,1
+La Salut,Gràcia,WiFi BCN,2
+La Salut,Gràcia,Parcs i jardins,2
+La Salut,Gràcia,Museus,2
+El Parc i la Llacuna del Poblenou,Sant Martí,Casals d'avis,1
+El Parc i la Llacuna del Poblenou,Sant Martí,Museus,2
+El Parc i la Llacuna del Poblenou,Sant Martí,Discoteques,5
+El Parc i la Llacuna del Poblenou,Sant Martí,Àrees de jocs infantils,9
+El Parc i la Llacuna del Poblenou,Sant Martí,Parcs i jardins,4
+El Parc i la Llacuna del Poblenou,Sant Martí,Auditoris,1
+El Parc i la Llacuna del Poblenou,Sant Martí,Casals de barri,1
+El Parc i la Llacuna del Poblenou,Sant Martí,Bars i pubs musicals,5
+El Parc i la Llacuna del Poblenou,Sant Martí,Biblioteques,1
+El Parc i la Llacuna del Poblenou,Sant Martí,Biblioteques municipals,1
+El Parc i la Llacuna del Poblenou,Sant Martí,Sales d'estudi,2
+El Parc i la Llacuna del Poblenou,Sant Martí,Centres cívics,1
+El Parc i la Llacuna del Poblenou,Sant Martí,WiFi BCN,1
+El Parc i la Llacuna del Poblenou,Sant Martí,Cinemes,1
+El Parc i la Llacuna del Poblenou,Sant Martí,Museus municipals,1
+Dreta de l'Eixample,Eixample,Parcs i jardins,14
+Dreta de l'Eixample,Eixample,Cocteleries,17
+Dreta de l'Eixample,Eixample,Xampanyeries,17
+Dreta de l'Eixample,Eixample,Restaurants,9
+Dreta de l'Eixample,Eixample,Auditoris,1
+Dreta de l'Eixample,Eixample,Discoteques,12
+Dreta de l'Eixample,Eixample,Bars i pubs musicals,21
+Dreta de l'Eixample,Eixample,Àrees de jocs infantils,15
+Dreta de l'Eixample,Eixample,Museus,9
+Dreta de l'Eixample,Eixample,Casals d'avis,3
+Dreta de l'Eixample,Eixample,Teatres,8
+Dreta de l'Eixample,Eixample,Biblioteques,21
+Dreta de l'Eixample,Eixample,Interiors d'illa,12
+Dreta de l'Eixample,Eixample,WiFi BCN,4
+Dreta de l'Eixample,Eixample,Museus municipals,1
+Dreta de l'Eixample,Eixample,Cinemes,3
+Dreta de l'Eixample,Eixample,Centres cívics,1
+Dreta de l'Eixample,Eixample,Biblioteques municipals,2
+Dreta de l'Eixample,Eixample,Sales d'estudi,1
+Dreta de l'Eixample,Eixample,Karaokes,2
+Dreta de l'Eixample,Eixample,Universitats,1
+La Marina de Port,Sants-Montjuïc,Àrees de jocs infantils,26
+La Marina de Port,Sants-Montjuïc,Parcs i jardins,10
+La Marina de Port,Sants-Montjuïc,Centres cívics,2
+La Marina de Port,Sants-Montjuïc,WiFi BCN,6
+La Marina de Port,Sants-Montjuïc,Bancs del Temps,1
+La Marina de Port,Sants-Montjuïc,Casals de barri,2
+La Marina de Port,Sants-Montjuïc,Casals d'avis,3
+La Marina de Port,Sants-Montjuïc,Auditoris,1
+La Marina de Port,Sants-Montjuïc,Casals i espais per a joves,1
+La Marina de Port,Sants-Montjuïc,Biblioteques,1
+La Marina de Port,Sants-Montjuïc,Biblioteques municipals,1
+La Marina de Port,Sants-Montjuïc,Sales d'estudi,1
+Les Corts,Les Corts,Centres cívics,2
+Les Corts,Les Corts,WiFi BCN,5
+Les Corts,Les Corts,Casals i espais per a joves,1
+Les Corts,Les Corts,Arxius municipals,1
+Les Corts,Les Corts,Bars i pubs musicals,8
+Les Corts,Les Corts,Casals d'avis,2
+Les Corts,Les Corts,Àrees de jocs infantils,23
+Les Corts,Les Corts,Discoteques,1
+Les Corts,Les Corts,Sales d'estudi,1
+Les Corts,Les Corts,Parcs i jardins,12
+Les Corts,Les Corts,Ateneus de fabricació,1
+Les Corts,Les Corts,Bancs del Temps,1
+Les Corts,Les Corts,Auditoris,1
+Les Corts,Les Corts,Biblioteques,1
+Les Corts,Les Corts,Biblioteques municipals,1
+El Carmel,Horta-Guinardó,Àrees de jocs infantils,12
+El Carmel,Horta-Guinardó,Parcs i jardins,4
+El Carmel,Horta-Guinardó,Casals d'avis,3
+El Carmel,Horta-Guinardó,Casals de barri,1
+El Carmel,Horta-Guinardó,Casals infantils,1
+El Carmel,Horta-Guinardó,Biblioteques,1
+El Carmel,Horta-Guinardó,Biblioteques municipals,1
+El Carmel,Horta-Guinardó,Sales d'estudi,1
+El Carmel,Horta-Guinardó,Casals i espais per a joves,1
+El Carmel,Horta-Guinardó,Centres cívics,1
+El Carmel,Horta-Guinardó,WiFi BCN,1
+El Carmel,Horta-Guinardó,Bancs del Temps,1
+Vilapicina i la Torre Llobeta,Nou Barris,Àrees de jocs infantils,6
+Vilapicina i la Torre Llobeta,Nou Barris,Casals d'avis,2
+Vilapicina i la Torre Llobeta,Nou Barris,WiFi BCN,3
+Vilapicina i la Torre Llobeta,Nou Barris,Biblioteques,1
+Vilapicina i la Torre Llobeta,Nou Barris,Biblioteques municipals,1
+Vilapicina i la Torre Llobeta,Nou Barris,Sales d'estudi,1
+Vilapicina i la Torre Llobeta,Nou Barris,Centres cívics,1
+Vilapicina i la Torre Llobeta,Nou Barris,Casals infantils,1
+Vilapicina i la Torre Llobeta,Nou Barris,Parcs i jardins,1
+Diagonal Mar i el Front Marítim del Poblenou,Sant Martí,Àrees de jocs infantils,22
+Diagonal Mar i el Front Marítim del Poblenou,Sant Martí,Parcs i jardins,8
+Diagonal Mar i el Front Marítim del Poblenou,Sant Martí,Cinemes,1
+Diagonal Mar i el Front Marítim del Poblenou,Sant Martí,Arxius municipals,1
+Diagonal Mar i el Front Marítim del Poblenou,Sant Martí,Casals de barri,1
+Diagonal Mar i el Front Marítim del Poblenou,Sant Martí,WiFi BCN,1
+Diagonal Mar i el Front Marítim del Poblenou,Sant Martí,Biblioteques,1
+Sarrià,Sarrià-Sant Gervasi,Parcs i jardins,11
+Sarrià,Sarrià-Sant Gervasi,Àrees de jocs infantils,17
+Sarrià,Sarrià-Sant Gervasi,Casals d'avis,2
+Sarrià,Sarrià-Sant Gervasi,Teatres,1
+Sarrià,Sarrià-Sant Gervasi,WiFi BCN,3
+Sarrià,Sarrià-Sant Gervasi,Centres cívics,2
+Sarrià,Sarrià-Sant Gervasi,Cocteleries,2
+Sarrià,Sarrià-Sant Gervasi,Xampanyeries,2
+Sarrià,Sarrià-Sant Gervasi,Biblioteques,4
+Sarrià,Sarrià-Sant Gervasi,Bars i pubs musicals,1
+Sarrià,Sarrià-Sant Gervasi,Arxius municipals,1
+Sarrià,Sarrià-Sant Gervasi,Museus,2
+Sarrià,Sarrià-Sant Gervasi,Casals infantils,1
+Sarrià,Sarrià-Sant Gervasi,Casals i espais per a joves,1
+La Vila Olímpica del Poblenou,Sant Martí,Auditoris,2
+La Vila Olímpica del Poblenou,Sant Martí,Bars i pubs musicals,2
+La Vila Olímpica del Poblenou,Sant Martí,Discoteques,2
+La Vila Olímpica del Poblenou,Sant Martí,Parcs i jardins,6
+La Vila Olímpica del Poblenou,Sant Martí,Karaokes,1
+La Vila Olímpica del Poblenou,Sant Martí,Biblioteques,3
+La Vila Olímpica del Poblenou,Sant Martí,Sales d'estudi,2
+La Vila Olímpica del Poblenou,Sant Martí,Arxius municipals,1
+La Vila Olímpica del Poblenou,Sant Martí,Cocteleries,1
+La Vila Olímpica del Poblenou,Sant Martí,Xampanyeries,1
+La Vila Olímpica del Poblenou,Sant Martí,Cinemes,1
+La Vila Olímpica del Poblenou,Sant Martí,Biblioteques municipals,1
+La Vila Olímpica del Poblenou,Sant Martí,Àrees de jocs infantils,11
+Les Roquetes,Nou Barris,Parcs i jardins,2
+Les Roquetes,Nou Barris,Casals d'avis,1
+Les Roquetes,Nou Barris,WiFi BCN,2
+Les Roquetes,Nou Barris,Àrees de jocs infantils,8
+Les Roquetes,Nou Barris,Casals i espais per a joves,1
+Les Roquetes,Nou Barris,Biblioteques,1
+Les Roquetes,Nou Barris,Biblioteques municipals,1
+Les Roquetes,Nou Barris,Sales d'estudi,1
+Les Roquetes,Nou Barris,Casals infantils,1
+Les Roquetes,Nou Barris,Casals de barri,1
+Sant Andreu de Palomar,Sant Andreu,Àrees de jocs infantils,25
+Sant Andreu de Palomar,Sant Andreu,Bars i pubs musicals,3
+Sant Andreu de Palomar,Sant Andreu,Casals d'avis,3
+Sant Andreu de Palomar,Sant Andreu,WiFi BCN,3
+Sant Andreu de Palomar,Sant Andreu,Parcs i jardins,5
+Sant Andreu de Palomar,Sant Andreu,Biblioteques,1
+Sant Andreu de Palomar,Sant Andreu,Biblioteques municipals,1
+Sant Andreu de Palomar,Sant Andreu,Sales d'estudi,2
+Sant Andreu de Palomar,Sant Andreu,Casals i espais per a joves,1
+Sant Andreu de Palomar,Sant Andreu,Casals de barri,2
+Sant Andreu de Palomar,Sant Andreu,Teatres,5
+Sant Andreu de Palomar,Sant Andreu,Arxius municipals,1
+Sant Andreu de Palomar,Sant Andreu,Bancs del Temps,1
+Sant Andreu de Palomar,Sant Andreu,Museus,2
+Sant Andreu de Palomar,Sant Andreu,Museus municipals,1
+Sant Andreu de Palomar,Sant Andreu,Centres cívics,1
+L'Antiga Esquerra de l'Eixample,Eixample,Àrees de jocs infantils,14
+L'Antiga Esquerra de l'Eixample,Eixample,Cocteleries,20
+L'Antiga Esquerra de l'Eixample,Eixample,Xampanyeries,20
+L'Antiga Esquerra de l'Eixample,Eixample,Biblioteques,8
+L'Antiga Esquerra de l'Eixample,Eixample,Interiors d'illa,7
+L'Antiga Esquerra de l'Eixample,Eixample,Parcs i jardins,10
+L'Antiga Esquerra de l'Eixample,Eixample,Bars i pubs musicals,31
+L'Antiga Esquerra de l'Eixample,Eixample,Restaurants,11
+L'Antiga Esquerra de l'Eixample,Eixample,Sales d'estudi,4
+L'Antiga Esquerra de l'Eixample,Eixample,Teatres,3
+L'Antiga Esquerra de l'Eixample,Eixample,Discoteques,4
+L'Antiga Esquerra de l'Eixample,Eixample,Museus,3
+L'Antiga Esquerra de l'Eixample,Eixample,Cinemes,1
+L'Antiga Esquerra de l'Eixample,Eixample,Karaokes,2
+L'Antiga Esquerra de l'Eixample,Eixample,Casals d'avis,1
+L'Antiga Esquerra de l'Eixample,Eixample,WiFi BCN,1
+L'Antiga Esquerra de l'Eixample,Eixample,Casals i espais per a joves,1
+Vall d'Hebron,Horta-Guinardó,Biblioteques,2
+Vall d'Hebron,Horta-Guinardó,Parcs i jardins,7
+Vall d'Hebron,Horta-Guinardó,Casals de barri,1
+Vall d'Hebron,Horta-Guinardó,Àrees de jocs infantils,9
+Vall d'Hebron,Horta-Guinardó,Casals d'avis,1
+Vall d'Hebron,Horta-Guinardó,WiFi BCN,2
+Vall d'Hebron,Horta-Guinardó,Altres esports,1
+Vall d'Hebron,Horta-Guinardó,Atletisme en pista,1
+Vall d'Hebron,Horta-Guinardó,Instal·lacions esportives,1
+Vall d'Hebron,Horta-Guinardó,Sales d'estudi,1
+Vall d'Hebron,Horta-Guinardó,Museus,2
+Vall d'Hebron,Horta-Guinardó,Bancs del Temps,1
+Vallbona,Nou Barris,Casals de barri,1
+Vallbona,Nou Barris,WiFi BCN,1
+Vallbona,Nou Barris,Casals infantils,1
+Vallbona,Nou Barris,Àrees de jocs infantils,2
+El Putxet i el Farró,Sarrià-Sant Gervasi,Parcs i jardins,7
+El Putxet i el Farró,Sarrià-Sant Gervasi,Casals d'avis,2
+El Putxet i el Farró,Sarrià-Sant Gervasi,Cinemes,1
+El Putxet i el Farró,Sarrià-Sant Gervasi,Centres cívics,1
+El Putxet i el Farró,Sarrià-Sant Gervasi,WiFi BCN,1
+El Putxet i el Farró,Sarrià-Sant Gervasi,Casals de barri,1
+El Putxet i el Farró,Sarrià-Sant Gervasi,Casals infantils,1
+El Putxet i el Farró,Sarrià-Sant Gervasi,Teatres,1
+El Putxet i el Farró,Sarrià-Sant Gervasi,Cocteleries,1
+El Putxet i el Farró,Sarrià-Sant Gervasi,Xampanyeries,1
+El Putxet i el Farró,Sarrià-Sant Gervasi,Àrees de jocs infantils,9
+El Putxet i el Farró,Sarrià-Sant Gervasi,Biblioteques,1
+Sant Gervasi – Galvany,Sarrià-Sant Gervasi,Casals i espais per a joves,1
+Sant Gervasi – Galvany,Sarrià-Sant Gervasi,Casals d'avis,3
+Sant Gervasi – Galvany,Sarrià-Sant Gervasi,Discoteques,9
+Sant Gervasi – Galvany,Sarrià-Sant Gervasi,Parcs i jardins,9
+Sant Gervasi – Galvany,Sarrià-Sant Gervasi,WiFi BCN,2
+Sant Gervasi – Galvany,Sarrià-Sant Gervasi,Cinemes,3
+Sant Gervasi – Galvany,Sarrià-Sant Gervasi,Bars i pubs musicals,11
+Sant Gervasi – Galvany,Sarrià-Sant Gervasi,Centres cívics,1
+Sant Gervasi – Galvany,Sarrià-Sant Gervasi,Teatres,4
+Sant Gervasi – Galvany,Sarrià-Sant Gervasi,Àrees de jocs infantils,7
+Sant Gervasi – Galvany,Sarrià-Sant Gervasi,Biblioteques,5
+Sant Gervasi – Galvany,Sarrià-Sant Gervasi,Sales d'estudi,1
+Sant Gervasi – Galvany,Sarrià-Sant Gervasi,Museus,3
+Sant Gervasi – Galvany,Sarrià-Sant Gervasi,Cocteleries,6
+Sant Gervasi – Galvany,Sarrià-Sant Gervasi,Xampanyeries,6
+Sant Gervasi – Galvany,Sarrià-Sant Gervasi,Salons de ball,1
+Sant Gervasi – Galvany,Sarrià-Sant Gervasi,Restaurants,3
+Sant Gervasi – Galvany,Sarrià-Sant Gervasi,Karaokes,1
+Bon Pastor,Sant Andreu,Àrees de jocs infantils,10
+Bon Pastor,Sant Andreu,Casals d'avis,1
+Bon Pastor,Sant Andreu,WiFi BCN,2
+Bon Pastor,Sant Andreu,Biblioteques,2
+Bon Pastor,Sant Andreu,Biblioteques municipals,2
+Bon Pastor,Sant Andreu,Sales d'estudi,1
+Bon Pastor,Sant Andreu,Parcs i jardins,2
+Bon Pastor,Sant Andreu,Centres cívics,1
+Bon Pastor,Sant Andreu,Casals infantils,1
+Bon Pastor,Sant Andreu,Cinemes,1
+El Camp de l'Arpa del Clot,Sant Martí,Àrees de jocs infantils,13
+El Camp de l'Arpa del Clot,Sant Martí,Casals de barri,1
+El Camp de l'Arpa del Clot,Sant Martí,WiFi BCN,1
+El Camp de l'Arpa del Clot,Sant Martí,Casals d'avis,2
+El Camp de l'Arpa del Clot,Sant Martí,Casals i espais per a joves,1
+El Camp de l'Arpa del Clot,Sant Martí,Teatres,4
+El Camp de l'Arpa del Clot,Sant Martí,Biblioteques,1
+El Camp de l'Arpa del Clot,Sant Martí,Biblioteques municipals,1
+El Camp de l'Arpa del Clot,Sant Martí,Sales d'estudi,1
+El Camp de l'Arpa del Clot,Sant Martí,Parcs i jardins,1
+Can Baró,Horta-Guinardó,Àrees de jocs infantils,6
+Can Baró,Horta-Guinardó,Parcs i jardins,1
+Can Baró,Horta-Guinardó,Casals infantils,1
+Can Baró,Horta-Guinardó,Casals d'avis,1
+Can Baró,Horta-Guinardó,Casals de barri,1
+Can Baró,Horta-Guinardó,Altres esports,1
+Can Baró,Horta-Guinardó,Instal·lacions esportives,1
+Can Baró,Horta-Guinardó,WiFi BCN,1
+La Verneda i la Pau,Sant Martí,Àrees de jocs infantils,43
+La Verneda i la Pau,Sant Martí,Casals infantils,1
+La Verneda i la Pau,Sant Martí,Casals d'avis,4
+La Verneda i la Pau,Sant Martí,Casals de barri,3
+La Verneda i la Pau,Sant Martí,WiFi BCN,3
+La Verneda i la Pau,Sant Martí,Bancs del Temps,1
+La Guineueta,Nou Barris,Casals d'avis,1
+La Guineueta,Nou Barris,Biblioteques,1
+La Guineueta,Nou Barris,Biblioteques municipals,1
+La Guineueta,Nou Barris,Sales d'estudi,3
+La Guineueta,Nou Barris,Parcs i jardins,3
+La Guineueta,Nou Barris,Àrees de jocs infantils,9
+La Guineueta,Nou Barris,Ateneus de fabricació,1
+La Guineueta,Nou Barris,Arxius municipals,1
+La Guineueta,Nou Barris,Casals i espais per a joves,1
+La Guineueta,Nou Barris,WiFi BCN,1
+Ciutat Meridiana,Nou Barris,Teatres,1
+Ciutat Meridiana,Nou Barris,Casals i espais per a joves,1
+Ciutat Meridiana,Nou Barris,Àrees de jocs infantils,7
+Ciutat Meridiana,Nou Barris,Centres cívics,1
+Ciutat Meridiana,Nou Barris,WiFi BCN,2
+Ciutat Meridiana,Nou Barris,Ateneus de fabricació,1
+Ciutat Meridiana,Nou Barris,Parcs i jardins,1
+Ciutat Meridiana,Nou Barris,Casals d'avis,1
+El Congrés i els Indians,Sant Andreu,Àrees de jocs infantils,11
+El Congrés i els Indians,Sant Andreu,Casals d'avis,1
+El Congrés i els Indians,Sant Andreu,Parcs i jardins,2
+El Congrés i els Indians,Sant Andreu,Bars i pubs musicals,1
+El Congrés i els Indians,Sant Andreu,Cocteleries,1
+El Congrés i els Indians,Sant Andreu,Xampanyeries,1
+El Congrés i els Indians,Sant Andreu,Casals de barri,1
+El Congrés i els Indians,Sant Andreu,WiFi BCN,1
+El Congrés i els Indians,Sant Andreu,Biblioteques,1
+El Congrés i els Indians,Sant Andreu,Teatres,1
+El Congrés i els Indians,Sant Andreu,Centres cívics,1
+Porta,Nou Barris,Àrees de jocs infantils,15
+Porta,Nou Barris,Casals i espais per a joves,1
+Porta,Nou Barris,Bancs del Temps,1
+Porta,Nou Barris,Cinemes,1
+Porta,Nou Barris,Parcs i jardins,4
+Porta,Nou Barris,Casals d'avis,1
+Porta,Nou Barris,WiFi BCN,2
+Porta,Nou Barris,Casals de barri,1
+Porta,Nou Barris,Centres cívics,1
+El Guinardó,Horta-Guinardó,Biblioteques,3
+El Guinardó,Horta-Guinardó,Parcs i jardins,3
+El Guinardó,Horta-Guinardó,Àrees de jocs infantils,8
+El Guinardó,Horta-Guinardó,Casals infantils,1
+El Guinardó,Horta-Guinardó,Bars i pubs musicals,1
+El Guinardó,Horta-Guinardó,Centres cívics,1
+El Guinardó,Horta-Guinardó,WiFi BCN,2
+El Guinardó,Horta-Guinardó,Museus,1
+El Guinardó,Horta-Guinardó,Casals i espais per a joves,1
+El Guinardó,Horta-Guinardó,Casals de barri,1
+El Guinardó,Horta-Guinardó,Casals d'avis,1
+el Coll,Gràcia,Casals i espais per a joves,1
+el Coll,Gràcia,WiFi BCN,3
+el Coll,Gràcia,Casals d'avis,1
+el Coll,Gràcia,Casals infantils,1
+el Coll,Gràcia,Centres cívics,1
+el Coll,Gràcia,Àrees de jocs infantils,3
+el Coll,Gràcia,Parcs i jardins,1
+La Bordeta,Sants-Montjuïc,Teatres,4
+La Bordeta,Sants-Montjuïc,Parcs i jardins,2
+La Bordeta,Sants-Montjuïc,Àrees de jocs infantils,11
+La Bordeta,Sants-Montjuïc,Casals d'avis,1
+La Bordeta,Sants-Montjuïc,Bancs del Temps,1
+Montbau,Horta-Guinardó,Parcs i jardins,4
+Montbau,Horta-Guinardó,Àrees de jocs infantils,4
+Montbau,Horta-Guinardó,Biblioteques,3
+Montbau,Horta-Guinardó,Sales d'estudi,2
+Montbau,Horta-Guinardó,WiFi BCN,1
+Montbau,Horta-Guinardó,Casals d'avis,1
+Montbau,Horta-Guinardó,Biblioteques municipals,1
+Trinitat Vella,Sant Andreu,Centres cívics,2
+Trinitat Vella,Sant Andreu,Àrees de jocs infantils,5
+Trinitat Vella,Sant Andreu,WiFi BCN,1
+Trinitat Vella,Sant Andreu,Casals d'avis,2
+Trinitat Vella,Sant Andreu,Casals i espais per a joves,2
+Trinitat Vella,Sant Andreu,Biblioteques,2
+Trinitat Vella,Sant Andreu,Altres esports,1
+Trinitat Vella,Sant Andreu,Natació,1
+Trinitat Vella,Sant Andreu,Instal·lacions esportives,1
+Trinitat Vella,Sant Andreu,Biblioteques municipals,1
+Trinitat Vella,Sant Andreu,Sales d'estudi,1
+Hostafrancs,Sants-Montjuïc,Parcs i jardins,1
+Hostafrancs,Sants-Montjuïc,Àrees de jocs infantils,3
+Hostafrancs,Sants-Montjuïc,Arxius municipals,1
+Hostafrancs,Sants-Montjuïc,Centres cívics,1
+Hostafrancs,Sants-Montjuïc,WiFi BCN,1
+Hostafrancs,Sants-Montjuïc,Cinemes,1
+Hostafrancs,Sants-Montjuïc,Teatres,2
+Can Peguera,Nou Barris,Casals d'avis,1
+Can Peguera,Nou Barris,WiFi BCN,2
+Can Peguera,Nou Barris,Àrees de jocs infantils,2
+Can Peguera,Nou Barris,Casals de barri,1
+Sant Genís dels Agudells,Horta-Guinardó,Centres cívics,1
+Sant Genís dels Agudells,Horta-Guinardó,WiFi BCN,1
+Sant Genís dels Agudells,Horta-Guinardó,Interiors d'illa,1
+Sant Genís dels Agudells,Horta-Guinardó,Parcs i jardins,4
+Sant Genís dels Agudells,Horta-Guinardó,Àrees de jocs infantils,9
+Sant Genís dels Agudells,Horta-Guinardó,Casals d'avis,1
+Sant Genís dels Agudells,Horta-Guinardó,Casals i espais per a joves,1
+Sant Genís dels Agudells,Horta-Guinardó,Bancs del Temps,1
+Sant Genís dels Agudells,Horta-Guinardó,Museus,1
+Sant Antoni,Eixample,Teatres,4
+Sant Antoni,Eixample,Cinemes,1
+Sant Antoni,Eixample,Àrees de jocs infantils,16
+Sant Antoni,Eixample,Casals d'avis,3
+Sant Antoni,Eixample,WiFi BCN,3
+Sant Antoni,Eixample,Cocteleries,3
+Sant Antoni,Eixample,Xampanyeries,3
+Sant Antoni,Eixample,Restaurants,4
+Sant Antoni,Eixample,Interiors d'illa,7
+Sant Antoni,Eixample,Parcs i jardins,9
+Sant Antoni,Eixample,Bars i pubs musicals,4
+Sant Antoni,Eixample,Tablaos flamencs,1
+Sant Antoni,Eixample,Biblioteques,3
+Sant Antoni,Eixample,Biblioteques municipals,1
+Sant Antoni,Eixample,Sales d'estudi,1
+Sant Antoni,Eixample,Discoteques,1
+Sant Antoni,Eixample,Casals infantils,1
+Sant Antoni,Eixample,Casals de barri,1
+Sant Antoni,Eixample,Casals i espais per a joves,2
+Sant Antoni,Eixample,Centres cívics,1
+Sant Antoni,Eixample,Arxius municipals,1
+Gothic Quarter,Ciutat Vella,Cocteleries,9
+Gothic Quarter,Ciutat Vella,Xampanyeries,9
+Gothic Quarter,Ciutat Vella,Biblioteques,11
+Gothic Quarter,Ciutat Vella,Àrees de jocs infantils,7
+Gothic Quarter,Ciutat Vella,Discoteques,7
+Gothic Quarter,Ciutat Vella,Bars i pubs musicals,21
+Gothic Quarter,Ciutat Vella,Museus,10
+Gothic Quarter,Ciutat Vella,Auditoris,2
+Gothic Quarter,Ciutat Vella,Bancs del Temps,2
+Gothic Quarter,Ciutat Vella,Casals infantils,1
+Gothic Quarter,Ciutat Vella,Museus municipals,4
+Gothic Quarter,Ciutat Vella,Centres cívics,1
+Gothic Quarter,Ciutat Vella,WiFi BCN,5
+Gothic Quarter,Ciutat Vella,Parcs i jardins,2
+Gothic Quarter,Ciutat Vella,Restaurants,5
+Gothic Quarter,Ciutat Vella,Teatres,2
+Gothic Quarter,Ciutat Vella,Arxius municipals,3
+Gothic Quarter,Ciutat Vella,Casals i espais per a joves,2
+Gothic Quarter,Ciutat Vella,Biblioteques municipals,2
+Gothic Quarter,Ciutat Vella,Tablaos flamencs,1
+Gothic Quarter,Ciutat Vella,Cinemes,1
+Gothic Quarter,Ciutat Vella,Casals d'avis,1
+Gothic Quarter,Ciutat Vella,Sales d'estudi,1
+La Font d'en Fargues,Horta-Guinardó,Parcs i jardins,1
+La Font d'en Fargues,Horta-Guinardó,Àrees de jocs infantils,1
+La Font d'en Fargues,Horta-Guinardó,Casals de barri,1
+La Font d'en Fargues,Horta-Guinardó,WiFi BCN,1
+"""La Barceloneta, Barcelona""",Ciutat Vella,Casals infantils,1
+"""La Barceloneta, Barcelona""",Ciutat Vella,Àrees de jocs infantils,7
+"""La Barceloneta, Barcelona""",Ciutat Vella,Bars i pubs musicals,3
+"""La Barceloneta, Barcelona""",Ciutat Vella,Discoteques,5
+"""La Barceloneta, Barcelona""",Ciutat Vella,Casals d'avis,2
+"""La Barceloneta, Barcelona""",Ciutat Vella,Restaurants,8
+"""La Barceloneta, Barcelona""",Ciutat Vella,Biblioteques,6
+"""La Barceloneta, Barcelona""",Ciutat Vella,Parcs i jardins,2
+"""La Barceloneta, Barcelona""",Ciutat Vella,Sales d'estudi,3
+"""La Barceloneta, Barcelona""",Ciutat Vella,Cocteleries,5
+"""La Barceloneta, Barcelona""",Ciutat Vella,Xampanyeries,5
+"""La Barceloneta, Barcelona""",Ciutat Vella,Ateneus de fabricació,1
+"""La Barceloneta, Barcelona""",Ciutat Vella,Centres cívics,1
+"""La Barceloneta, Barcelona""",Ciutat Vella,WiFi BCN,1
+"""La Barceloneta, Barcelona""",Ciutat Vella,Auditoris,1
+"""La Barceloneta, Barcelona""",Ciutat Vella,Museus,1
+"""La Barceloneta, Barcelona""",Ciutat Vella,Sales de festes,1
+"""La Barceloneta, Barcelona""",Ciutat Vella,Salons de ball,1
+"""La Barceloneta, Barcelona""",Ciutat Vella,Biblioteques municipals,1
+Sant Gervasi – la Bonanova,Sarrià-Sant Gervasi,Àrees de jocs infantils,10
+Sant Gervasi – la Bonanova,Sarrià-Sant Gervasi,Parcs i jardins,6
+Sant Gervasi – la Bonanova,Sarrià-Sant Gervasi,Centres cívics,2
+Sant Gervasi – la Bonanova,Sarrià-Sant Gervasi,WiFi BCN,3
+Sant Gervasi – la Bonanova,Sarrià-Sant Gervasi,Bars i pubs musicals,3
+Sant Gervasi – la Bonanova,Sarrià-Sant Gervasi,Cocteleries,2
+Sant Gervasi – la Bonanova,Sarrià-Sant Gervasi,Xampanyeries,2
+Sant Gervasi – la Bonanova,Sarrià-Sant Gervasi,Casals d'avis,1
+Sant Gervasi – la Bonanova,Sarrià-Sant Gervasi,Biblioteques,3
+Sant Gervasi – la Bonanova,Sarrià-Sant Gervasi,Teatres,2
+Sant Gervasi – la Bonanova,Sarrià-Sant Gervasi,Cinemes,1
+Sant Gervasi – la Bonanova,Sarrià-Sant Gervasi,Biblioteques municipals,1
+Sant Gervasi – la Bonanova,Sarrià-Sant Gervasi,Sales d'estudi,2
+Sant Gervasi – la Bonanova,Sarrià-Sant Gervasi,Discoteques,1
+Sant Gervasi – la Bonanova,Sarrià-Sant Gervasi,Museus,1
+La Clota,Horta-Guinardó,Parcs i jardins,2
+La Clota,Horta-Guinardó,Àrees de jocs infantils,1
+La Clota,Horta-Guinardó,Casals i espais per a joves,1
+La Maternitat i Sant Ramon,Les Corts,Casals d'avis,3
+La Maternitat i Sant Ramon,Les Corts,Àrees de jocs infantils,9
+La Maternitat i Sant Ramon,Les Corts,Bars i pubs musicals,2
+La Maternitat i Sant Ramon,Les Corts,Parcs i jardins,11
+La Maternitat i Sant Ramon,Les Corts,WiFi BCN,4
+La Maternitat i Sant Ramon,Les Corts,Bancs del Temps,1
+La Maternitat i Sant Ramon,Les Corts,Sales d'estudi,10
+La Maternitat i Sant Ramon,Les Corts,Universitats,1
+La Maternitat i Sant Ramon,Les Corts,Centres cívics,2
+La Maternitat i Sant Ramon,Les Corts,Museus,3
+La Maternitat i Sant Ramon,Les Corts,Biblioteques,9
+La Maternitat i Sant Ramon,Les Corts,Bàsquet,1
+La Maternitat i Sant Ramon,Les Corts,Altres esports,1
+La Maternitat i Sant Ramon,Les Corts,Atletisme en pista,1
+La Maternitat i Sant Ramon,Les Corts,Tennis taula,1
+La Maternitat i Sant Ramon,Les Corts,Instal·lacions esportives,1
+La Maternitat i Sant Ramon,Les Corts,Discoteques,3
+La Maternitat i Sant Ramon,Les Corts,Cocteleries,1
+La Maternitat i Sant Ramon,Les Corts,Xampanyeries,1
+La Maternitat i Sant Ramon,Les Corts,Cinemes,1
+La Maternitat i Sant Ramon,Les Corts,Casals i espais per a joves,1
+La Maternitat i Sant Ramon,Les Corts,Auditoris,3
+La Maternitat i Sant Ramon,Les Corts,Biblioteques municipals,1
+Les Tres Torres,Sarrià-Sant Gervasi,Àrees de jocs infantils,5
+Les Tres Torres,Sarrià-Sant Gervasi,Biblioteques,1
+Les Tres Torres,Sarrià-Sant Gervasi,Biblioteques municipals,1
+Les Tres Torres,Sarrià-Sant Gervasi,Sales d'estudi,1
+Les Tres Torres,Sarrià-Sant Gervasi,Cinemes,1
+Les Tres Torres,Sarrià-Sant Gervasi,Parcs i jardins,3
+Les Tres Torres,Sarrià-Sant Gervasi,Casals d'avis,1
+Les Tres Torres,Sarrià-Sant Gervasi,Teatres,1
+Pedralbes,Les Corts,Àrees de jocs infantils,15
+Pedralbes,Les Corts,Biblioteques,7
+Pedralbes,Les Corts,Parcs i jardins,9
+Pedralbes,Les Corts,Sales d'estudi,4
+Pedralbes,Les Corts,Museus,1
+Pedralbes,Les Corts,Museus municipals,1
+Pedralbes,Les Corts,Discoteques,1
+El Turó de la Peira,Nou Barris,Àrees de jocs infantils,6
+El Turó de la Peira,Nou Barris,Casals i espais per a joves,1
+El Turó de la Peira,Nou Barris,WiFi BCN,3
+El Turó de la Peira,Nou Barris,Parcs i jardins,2
+El Turó de la Peira,Nou Barris,Centres cívics,1
+El Turó de la Peira,Nou Barris,Casals infantils,1
+El Turó de la Peira,Nou Barris,Casals d'avis,1
+La Sagrera,Sant Andreu,Casals d'avis,2
+La Sagrera,Sant Andreu,WiFi BCN,4
+La Sagrera,Sant Andreu,Àrees de jocs infantils,11
+La Sagrera,Sant Andreu,Biblioteques,1
+La Sagrera,Sant Andreu,Biblioteques municipals,1
+La Sagrera,Sant Andreu,Sales d'estudi,1
+La Sagrera,Sant Andreu,Teatres,1
+La Sagrera,Sant Andreu,Casals i espais per a joves,1
+La Sagrera,Sant Andreu,Parcs i jardins,2
+La Sagrera,Sant Andreu,Casals de barri,1
+La Sagrera,Sant Andreu,Centres cívics,1
+La Marina del Prat Vermell,Sants-Montjuïc,Parcs i jardins,1
+La Marina del Prat Vermell,Sants-Montjuïc,Àrees de jocs infantils,2
+La Marina del Prat Vermell,Sants-Montjuïc,Museus,1
+La Marina del Prat Vermell,Sants-Montjuïc,Biblioteques,1
+"""Horta, Barcelona""",Horta-Guinardó,Bars i pubs musicals,3
+"""Horta, Barcelona""",Horta-Guinardó,Biblioteques,2
+"""Horta, Barcelona""",Horta-Guinardó,Biblioteques municipals,2
+"""Horta, Barcelona""",Horta-Guinardó,Parcs i jardins,3
+"""Horta, Barcelona""",Horta-Guinardó,Museus,2
+"""Horta, Barcelona""",Horta-Guinardó,Àrees de jocs infantils,11
+"""Horta, Barcelona""",Horta-Guinardó,Casals d'avis,2
+"""Horta, Barcelona""",Horta-Guinardó,WiFi BCN,2
+"""Horta, Barcelona""",Horta-Guinardó,Teatres,3
+"""Horta, Barcelona""",Horta-Guinardó,Centres cívics,1
+"""Horta, Barcelona""",Horta-Guinardó,Bancs del Temps,1
+"""Horta, Barcelona""",Horta-Guinardó,Discoteques,1
+"""Horta, Barcelona""",Horta-Guinardó,Sales d'estudi,1
+Navas,Sant Andreu,Cocteleries,1
+Navas,Sant Andreu,Xampanyeries,1
+Navas,Sant Andreu,Restaurants,1
+Navas,Sant Andreu,Àrees de jocs infantils,6
+Navas,Sant Andreu,Discoteques,1
+Navas,Sant Andreu,Centres cívics,1
+Navas,Sant Andreu,WiFi BCN,2
+Navas,Sant Andreu,Casals i espais per a joves,1
+Navas,Sant Andreu,Casals d'avis,1
+La Prosperitat,Nou Barris,Àrees de jocs infantils,7
+La Prosperitat,Nou Barris,Casals d'avis,2
+La Prosperitat,Nou Barris,Casals de barri,1
+La Prosperitat,Nou Barris,WiFi BCN,1
+La Prosperitat,Nou Barris,Parcs i jardins,1
+La Prosperitat,Nou Barris,Bancs del Temps,1
+La Prosperitat,Nou Barris,Casals i espais per a joves,1
+Provençals del Poblenou,Sant Martí,Àrees de jocs infantils,27
+Provençals del Poblenou,Sant Martí,Museus,1
+Provençals del Poblenou,Sant Martí,Museus municipals,1
+Provençals del Poblenou,Sant Martí,Parcs i jardins,2
+Provençals del Poblenou,Sant Martí,Casals i espais per a joves,1
+Provençals del Poblenou,Sant Martí,Casals de barri,1
+Provençals del Poblenou,Sant Martí,Casals d'avis,1
+Provençals del Poblenou,Sant Martí,Altres esports,1
+Provençals del Poblenou,Sant Martí,Instal·lacions esportives,1

@@ -1,0 +1,5 @@
+sklearn_pandas
+sklearn-pandas==1.5.0
+scikit-learn
+missingno
+spotipy
