@@ -1,0 +1,20 @@
+How to run the code.
+
+The notebooks are numerated in order. So tu run them just follow the numeration.
+
+1. 0_data_collection
+2. 1_data_quality_assessment
+3. 2_data_processing
+4. 3_features_processing
+5. 4_exploratory_data_analysis
+6. 5_clustering
+7. 6_resampling_procedure
+8. 7_1_SVM_linear
+9. 7_2_SVM_Kernelized
+10. 7_3_KNN_RF
+11. 7_4_XGBoost
+12. 8_model_selection
+13. 9_model_evaluation
+
+
+A folder containing the datsets generated in each step that generates a dataset are included in the folder named data.
