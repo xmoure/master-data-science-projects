@@ -1,0 +1,13 @@
+param m_train := 120;
+param m_test := 30;
+param n := 4;
+
+param nu := 1;
+
+read {i in 1..m_train}(
+A_train[i,1], A_train[i,2], A_train[i,3], A_train[i,4], y_train[i]
+) < iris_data/train_iris.txt;
+
+read {i in 1..m_test}(
+A_test[i,1], A_test[i,2], A_test[i,3], A_test[i,4], y_test[i]
+) < iris_data/test_iris.txt;

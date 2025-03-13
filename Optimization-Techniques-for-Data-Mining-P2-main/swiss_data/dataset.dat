@@ -1,0 +1,13 @@
+param m_train := 500;
+param m_test := 500;
+param n := 3;
+
+param nu := 1;
+
+read {i in 1..m_train}(
+A_train[i,1], A_train[i,2], A_train[i,3], y_train[i]
+) < swiss_data/train_data.txt;
+
+read {i in 1..m_test}(
+A_test[i,1], A_test[i,2], A_test[i,3], y_test[i]
+) < swiss_data/test_data.txt;

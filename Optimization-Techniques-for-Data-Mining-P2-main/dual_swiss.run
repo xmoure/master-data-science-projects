@@ -1,0 +1,74 @@
+reset;
+
+print "SOLVING DUAL WITH SWISS DATA";
+
+option solver cplex;
+
+model dual.mod;
+
+data ./swiss_data/dataset.dat;
+
+solve;
+
+display lambda;
+
+display nu;
+
+param tol_accuracy := 1e-6; # Define a tolerance level for determining support vectors
+
+
+# Calculate the weights w[j]
+param w {1..n};
+let {j in 1..n} w[j] := sum {i in 1..m_train} lambda[i] * y_train[i] * A_train[i,j];
+
+# Variable to store the value of gamma
+var gamma;
+
+# Loop over the training set to find a support vector and calculate gamma
+for {i in 1..m_train} {
+    if lambda[i] > tol_accuracy and lambda[i] < nu - tol_accuracy then {
+        let gamma := y_train[i] - sum {j in 1..n} w[j] * A_train[i,j];
+        # Once a support vector is found and gamma is set, exit the loop
+        break;
+    }
+}
+
+# Check if gamma_value has been set and if so, divide by the number of features
+let gamma := gamma / n;
+
+display gamma;
+
+display w;
+
+
+
+
+print "Train accuracy";
+
+param y_pred_tr {1..m_train};
+let {i in {1..m_train}} y_pred_tr[i] :=
+    if sum{j in {1..n}}(A_train[i,j]*w[j] + gamma) > 0 then 1 else -1;
+
+param correct_tr = sum{i in {1..m_train}}(
+    if y_pred_tr[i] = y_train[i] then 1 else 0
+);
+
+param accuracy_tr = correct_tr / m_train;
+
+display accuracy_tr;
+
+
+print "Test accuracy";
+
+# Predict values with the test dataset
+param y_pred_te {1..m_test};
+let {i in {1..m_test}} y_pred_te[i] :=
+    if sum{j in {1..n}}(A_test[i,j]*w[j] + gamma) > 0 then 1 else -1;
+
+param correct_te = sum{i in {1..m_test}}(
+    if y_pred_te[i] = y_test[i] then 1 else 0
+);
+
+param accuracy_te = correct_te / m_test;
+
+display accuracy_te;

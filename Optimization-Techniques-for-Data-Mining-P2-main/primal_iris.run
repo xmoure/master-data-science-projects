@@ -1,0 +1,40 @@
+reset;
+
+option solver cplex;
+
+model primal.mod
+
+data ./iris_data/dataset.dat;
+
+solve;
+
+display w, gamma;
+
+print "Train accuracy";
+
+param y_pred_tr {1..m_train};
+let {i in {1..m_train}} y_pred_tr[i] :=
+    if sum{j in {1..n}}(A_train[i,j]*w[j] + gamma) > 0 then 1 else -1;
+
+param correct_tr = sum{i in {1..m_train}}(
+    if y_pred_tr[i] = y_train[i] then 1 else 0
+);
+
+param accuracy_tr = correct_tr / m_train;
+
+display accuracy_tr;
+
+print "Test accuracy";
+
+param y_pred_te {1..m_test};
+let {i in {1..m_test}} y_pred_te[i] :=
+    if sum{j in {1..n}}(A_test[i,j]*w[j] + gamma) > 0 then 1 else -1;
+
+param correct_te = sum{i in {1..m_test}}(
+    if y_pred_te[i] = y_test[i] then 1 else 0
+);
+
+param accuracy_te = correct_te / m_test;
+
+display accuracy_te;
+

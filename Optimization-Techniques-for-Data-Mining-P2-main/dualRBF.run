@@ -1,0 +1,54 @@
+reset;
+
+print "SOLVING DUAL kernel swiss";
+
+option solver cplex;
+
+model dualRBF.mod;
+
+data ./swiss_data/dataset.dat;
+
+solve;
+
+display lambda;
+
+display nu;
+
+param tol_accuracy := 1e-6;
+
+
+param w {1..n};
+let {j in 1..n} w[j] := sum{i in 1..m_train} lambda[i] * y_train[i] * A_train[i,j];
+display w;
+
+var gamma;
+
+
+for {i in 1..m_train : lambda[i] > tol_accuracy && lambda[i] < nu - tol_accuracy} {
+    let gamma := 1/y_train[i] - sum {j in 1..n} lambda[j] * y_train[j] * exp(-(1/n * (sum{k in 1..n} (A_train[i,k] - A_train[j,k])^2)));
+    break;
+}
+
+
+display gamma;
+
+param y_pred_continuous {1..m_test};
+var y_pred_binary {1..m_test};
+
+
+for {t in 1..m_test} {
+    let y_pred_continuous[t] := sum {j in 1..m_test} lambda[j] * y_train[j] * exp(-(1/n * (sum{k in 1..n} (A_train[j,k] - A_test[t,k])^2))) + gamma;
+}
+
+for {t in 1..m_test} {
+    let y_pred_binary[t] := if y_pred_continuous[t] <= 0 then -1 else 1;
+}
+
+param match {1..m_test};
+let {t in 1..m_test} match[t] := if y_pred_binary[t] = y_test[t] then 1 else 0;
+
+param correct_predictions := sum {t in 1..m_test} match[t];
+
+# Calculate and display accuracy
+param accuracy := correct_predictions / m_test;
+display accuracy;
