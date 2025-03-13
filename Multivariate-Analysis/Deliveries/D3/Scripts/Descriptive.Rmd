@@ -1,0 +1,232 @@
+---
+title: "MVA"
+output: html_document
+date: '2022-10-21'
+editor_options: 
+  chunk_output_type: inline
+---
+```{r}
+install.packages("dplyr")
+install.packages("corrplot")
+install.packages("ggplot2")
+install.packages("plyr")
+install.packages("gridExtra")
+install.packages("RColorBrewer")
+```
+
+```{r}
+library(dplyr)
+library(corrplot)
+library(ggplot2)
+library(plyr) 
+library(gridExtra)
+library(RColorBrewer)
+library(rstudioapi) 
+library(cowplot)
+script_dir <- getSourceEditorContext()$path 
+setwd(dirname(script_dir))
+dd <- read.table("Playstore-preprocessed.csv",header=T, sep=",");
+original_table <- read.table("Playstore-reduced.csv",header=T, sep=",");
+
+```
+
+```{r}
+dd$Category<-as.factor(dd$Category)
+dd$Minimum.Android<-as.factor(dd$Minimum.Android)
+dd$Content.Rating<-as.factor(dd$Content.Rating)
+dd$Ad.Supported<-as.factor(dd$Ad.Supported)
+dd$In.App.Purchases<-as.factor(dd$In.App.Purchases)
+```
+
+```{r}
+## Summary of numerical variables with nice format
+nice_table <- t(summary(Filter(is.numeric, dd)))
+nice_table <- apply(nice_table, 2, function(x)
+  sub('.*:', '' , x))
+cnames <-
+  c("Min", "1st Q.", "Median", "Mean", "3rd Q.", "Max", "NA's")
+if (length(colnames(nice_table)) < length(cnames)) {
+  colnames(nice_table) <- head(cnames,-1)
+}
+print(nice_table, quote = FALSE)
+png(
+  "num_summary.png",
+  height = 50 * nrow(nice_table),
+  width = 120 * ncol(nice_table),
+  res = 100
+)
+grid.table(nice_table)
+dev.off()
+
+```
+
+```{r}
+#Plot theme
+plot_theme = theme_classic() + 
+  theme(plot.title = element_text(hjust = 0.5, size = 14,face = 'bold'),
+        axis.title.x = element_text(size = 14),
+        axis.title.y = element_text(size = 14),
+        axis.text.x  = element_text(size = 12),
+        axis.text.y  = element_text(size = 12))
+
+numericalVariablesIndex <- which(sapply(dd,is.numeric))
+numericalVariablesIndex
+dataNum <-dd[,numericalVariablesIndex]
+
+CONT = function(xfeature, yfeature, xlabel, ylabel) {
+  ggplot(dataNum, aes(x = xfeature, y = yfeature)) +
+    geom_point() +
+    labs(x = xlabel, y = ylabel, title = paste(ylabel, "vs", xlabel)) +
+    plot_theme
+}
+
+# Rating vs installs
+c1 = CONT(dataNum$Installs, dataNum$Rating, 
+          "Installs", "Rating")
+c2 = CONT(dataNum$Size, dataNum$Rating, 
+          "Size", "Rating")
+c3 = CONT(dataNum$Size, dataNum$Installs, 
+          "Size", "Installs")
+c4 = CONT(dataNum$AppNameLen, dataNum$Installs, 
+          "Name length", "Installs")
+
+plot(c1)
+plot(c2)
+plot(c3)
+plot(c4)
+
+CUV = function(yfeature, ylabel) {
+  ggplot(dataNum, aes(x = "", y = yfeature)) +
+    geom_boxplot(fill = "#0000FF", outlier.colour = "red", outlier.shape = 1) +
+    stat_boxplot(geom = "errorbar", width = 0.5) +
+    labs( y = ylabel, title = paste(ylabel, "Distribution")) +
+    plot_theme}
+
+HIST = function(xfeature, xlabel, title, bins_amount = 100) {
+  ggplot(dd, aes(x=xfeature)) +
+  geom_histogram(bins =bins_amount ,fill = "blue", col = "black") +
+  ggtitle(title) +
+  xlab(xlabel)+
+    plot_theme}
+
+p1 = CUV(dataNum$Rating, "Rating" )
+p2 = CUV(dataNum$Rating.Count, "Rating Count" )
+p3 = CUV(dataNum$Size, "App size")
+p4 = CUV(dataNum$DaysLastUpdate, "Days since last updated")
+p5 = CUV(dataNum$ReleasedDays, "Days since release")
+p6 = CUV(dataNum$AppNameLen, "App name length")
+p7 = CUV(dataNum$Installs, "App installs")
+
+
+plot_grid(p1, p2, p3, p4, p5, p6, p7)
+
+pie_chart_add_support <- ggplot(dd, aes(x=factor(1), fill=Ad.Supported)) +  
+  geom_bar(aes(y = 100*(..count..)/sum(..count..)), width = 1) + coord_polar(theta="y") +  
+  theme(axis.text.y = element_blank(), axis.ticks.y = element_blank(), legend.title=element_blank()) +  
+  xlab("") + ylab("") + ggtitle("Ad.Supported")
+
+pie_chart_in_app_purchases <- ggplot(dd, aes(x=factor(1), fill=In.App.Purchases)) +  
+  geom_bar(aes(y = 100*(..count..)/sum(..count..)), width = 1) + coord_polar(theta="y") +  
+  theme(axis.text.y = element_blank(), axis.ticks.y = element_blank(), legend.title=element_blank()) +  
+  xlab("") + ylab("") + ggtitle("In app purchases")
+
+plot(pie_chart_add_support)
+plot(pie_chart_in_app_purchases)
+
+plot_grid(pie_chart_add_support, pie_chart_in_app_purchases)
+
+hist1 <- HIST(dd$Installs,"Installs", "Histogram of Installs",  bins_amount = 40)
+hist2 <- HIST(dd$Rating, "Rating","Histogram of Rating", bins_amount = 20)
+hist3 <- HIST(dd$Size, "Size","Histogram of Size",  bins_amount = 20)
+hist4 <- HIST(dd$AppNameLen, "Name length","Histogram App name length", bins_amount = 20)
+hist5 <- HIST(dd$DaysLastUpdate, "Days since last updated","Histogram Days last updated", bins_amount = 80)
+hist6 <- HIST(dd$ReleasedDays, "Days since release","Histogram Days since released ", bins_amount = 80)
+hist7 <- HIST(dd$Rating.Count, "Rating count","Histogram Rating count ", bins_amount = 80)
+
+plot_grid(hist1,hist2, hist3, hist4, hist5, hist6, hist7, ncols = 2)
+
+#Correlation between numerical variables
+correlations <- cor(dataNum) # correlation matrix for numeric variables
+print(correlations)
+corrplot(correlations)
+```
+
+```{r}
+#Sort categorical variables in descending order
+cat.sort <- function(x){reorder(x,x,function(y){-length(y)})}
+cat.var <- which(sapply(dd, is.factor))
+for (i in cat.var){ 
+  dd[,i] <- cat.sort(dd[,i])   
+}
+
+c1 <- ggplot(dd, aes(x=Category)) + ggtitle("Category") + xlab("Categories") + 
+  geom_bar(aes(y = 100*(..count..)/sum(..count..))) + ylab("Percentage") + coord_flip() +  
+  scale_x_discrete(limits = rev(levels(dd$Category)))
+
+c2 <- ggplot(dd, aes(x=Content.Rating)) + ggtitle("Content rating") + xlab("Content rating") +  
+  geom_bar(aes(y = 100*(..count..)/sum(..count..))) + ylab("Percentage") + coord_flip() + 
+  scale_x_discrete(limits = rev(levels(dd$Content.Rating))) 
+
+
+c3 <- ggplot(dd, aes(x=Minimum.Android)) + ggtitle("Minimum Android") + xlab("Minimum Android") +  
+  geom_bar(aes(y = 100*(..count..)/sum(..count..))) + ylab("Percentage") + coord_flip() + 
+  scale_x_discrete(limits = rev(levels(dd$Minimum.Android))) 
+
+
+#Pie charts of categorical variables 
+
+pie_chart1 <- ggplot(dd, aes(x=factor(1), fill=Category)) +  
+  geom_bar(aes(y = 100*(..count..)/sum(..count..)), width = 1) + coord_polar(theta="y") +  
+  theme(axis.text.y = element_blank(), axis.ticks.y = element_blank(), legend.title=element_blank()) +  
+  xlab("") + ylab("") + ggtitle("Categories")
+
+plot(pie_chart1)
+
+
+pie_chart2 <- ggplot(dd, aes(x=factor(1), fill=Content.Rating)) +  
+  geom_bar(aes(y = 100*(..count..)/sum(..count..)), width = 1) + coord_polar(theta="y") +  
+  theme(axis.text.y = element_blank(), axis.ticks.y = element_blank(), legend.title=element_blank()) +  
+  xlab("") + ylab("") + ggtitle("Content Rating")
+
+plot(pie_chart2)
+
+pie_chart3 <- ggplot(dd, aes(x=factor(1), fill=Minimum.Android)) +  
+  geom_bar(aes(y = 100*(..count..)/sum(..count..)), width = 1) + coord_polar(theta="y") +  
+  theme(axis.text.y = element_blank(), axis.ticks.y = element_blank(), legend.title=element_blank()) +  
+  xlab("") + ylab("") + ggtitle("Minimum Android")
+
+plot(pie_chart3)
+
+
+CAT = function(xfeature, yfeature, xlabel, ylabel) {
+  ggplot(dd, aes(x = xfeature, y = yfeature, fill = xfeature)) +
+    geom_boxplot(outlier.colour = "red", outlier.shape = 1, show.legend = F) + 
+    stat_boxplot(geom = "errorbar", width = 0.5) +
+    labs(x = xlabel, y = ylabel, title = paste(ylabel, "vs", xlabel)) +
+    plot_theme
+}
+
+x1 = CAT(dd$Category, dd$Rating, 
+                   "Category", "Rating")
+x2 = CAT(dd$Content.Rating, dd$Rating,
+                   "Content rating",  "Rating")
+
+x3 = CAT(dd$In.App.Purchases, dd$Rating, "In app purchases", "Rating")
+x4 = CAT(dd$Ad.Supported, dd$Rating, "Add supported", "Rating")
+
+x5 = CAT(dd$Category, dd$Size, "Category", "Size")
+
+x6 = CAT(dd$Minimum.Android, dd$Rating, "Minimum Android", "Rating")
+
+
+grid.arrange(c1, pie_chart1)
+grid.arrange(c2, pie_chart2)
+grid.arrange(c3, pie_chart3)
+
+plot(x1)
+plot(x2)
+plot(x3)
+plot(x4)
+plot(x5)
+plot(x6)
+```

@@ -1,0 +1,259 @@
+---
+title: "decisionTreeCart"
+output: html_document
+date: "2022-11-28"
+---
+
+```{r}
+###Also install RTools in your computer if library(RWeka) will be used
+library(DAAG)
+library(party)
+library(rpart)
+library(rpart.plot)
+library(mlbench)
+library(caret)
+library(pROC)
+library(tree)
+library(C50)
+library(printr)
+library(randomForest)
+```
+
+
+```{r}
+#############Classification Tree##############
+dd <- read.table("Playstore-preprocessed.csv",header=T, sep=",", dec='.',stringsAsFactors=TRUE)
+head(dd)
+mydata<-dd
+```
+
+```{r}
+#dd[,c(3,4,5,9,10,11,12)] <- scale(dd[,c(3,4,5,9,10,11,12)])
+```
+
+```{r}
+
+dd$f.rating<-""
+l <- which(dd$Rating >= 1 & dd$Rating<3)
+dd$f.rating[l] <- "1-3"
+l <- which(dd$Rating >= 3)
+dd$f.rating[l] <- "3-4"
+l <- which(dd$Rating >= 4)
+dd$f.rating[l] <- "4-5"
+
+# l <- which(dd$Rating >= 1 & dd$Rating<3.5)
+# dd$f.rating[l] <- "1-3.5"
+# l <- which(dd$Rating >= 3.5 & dd$Rating <4.5)
+# dd$f.rating[l] <- "3.5-4.5"
+# l <- which(dd$Rating >= 4.5)
+# dd$f.rating[l] <- "4.5-5"
+
+dd$f.rating <- as.factor(dd$f.rating)
+
+levels(dd$f.rating)
+table(dd$f.rating)
+```
+
+
+```{r}
+
+original_dd<-dd
+
+l <- which(dd$Rating >= 1 & dd$Rating<3)
+new <- rbind(dd,dd[l,])
+dd <- rbind(dd[l,],new)
+
+l <- which(dd$Rating >= 4)
+copy<-dd[sample(l,3500),]
+dd<-dd[-l,]
+
+dd <- rbind(dd,copy)
+table(dd$f.rating)
+# dd$Rating<-NULL
+dd$f.rating<-NULL
+
+
+# l <- which(dd$Rating >= 3.5 & dd$Rating <4.5)
+# copy<-dd[sample(l,3500),]
+# dd<-dd[-l,]
+# dd <- rbind(dd,copy)
+table(dd$f.rating)
+#dd$Rating<-NULL
+dd<- dd[sample(1:nrow(dd)), ]
+```
+
+
+```{r}
+###### Modelling rpart
+### Train & Test Partions
+set.seed(1234)
+ind <- sample(2, nrow(dd), replace = T, prob = c(0.7, 0.3))
+train <- dd[ind == 1,]
+test <- dd[ind == 2,]
+```
+
+
+```{r}
+#Tree Classification
+tree <- rpart(f.rating ~., data = train)
+###https://cran.r-project.org/web/packages/rpart/rpart.pdf
+tree
+rpart.plot(tree)
+rpart.rules(tree, style = "tall")
+```
+
+
+```{r}
+tree <- rpart(Rating ~ ., data = train, cp = 0,method="anova") ###Best strategy for tree fitting
+printcp(tree)
+plotcp(tree)
+head(tree$cptable, 10)
+xerror <- tree$cptable[,"xerror"]
+imin.xerror <- which.min(xerror)
+tree$cptable[imin.xerror, ]
+upper.xerror <- xerror[imin.xerror] + tree$cptable[imin.xerror, "xstd"]
+icp <- min(which(xerror <= upper.xerror))
+cp <- tree$cptable[icp, "CP"]
+tree <- prune(tree, cp = 1.004587e-03)
+##or tree <- rpart(yesno ~., data = train,0.00231303)
+tiff("Plot3.tiff", width = 4, height = 4, units = 'in', res = 500)
+rpart.plot(tree) # Make plot
+dev.off()
+
+##summary(tree)
+######NOTE:###You can change the cp value according to your data set.
+###Please note lower cp value means bigger the tree. If you are using too lower cp that leads to overfitting also.
+```
+
+
+```{r}
+####Checking results
+importance <- tree$variable.importance # Equivalente a caret::varImp(tree) 
+importance <- round(100*importance/sum(importance), 1)
+importance[importance >= 1]
+
+
+###Evaluation
+#Confusion matrix -train
+
+p <- predict(tree, train)
+
+mse = mean((train$Rating - p)^2)
+#mae = caret::MAE(train$Rating - p)
+#rmse = caret::RMSE(train$Rating - p)
+
+#Please make sure you mention positive classes in the confusion matrix.
+matrix<-confusionMatrix(p, train$f.rating)
+accuracy_Test <- sum(diag(matrix$table)) / sum(matrix$table)
+
+p2 <- predict(tree, test)
+confusionMatrix(p2, test$f.rating)
+mse1 = mean((test$Rating - p2)^2)
+### Help for Confusion Matrix ---> https://towardsdatascience.com/understanding-confusion-matrix-a9ad42dcfd62
+### Recall,Precision and Accuracy should be high as possible
+
+p1 <- predict(tree, test, type = 'prob')
+head(p1)
+p1 <- p1[,2]
+r <- multiclass.roc(test$yesno, p1, percent = TRUE)
+roc <- r[['rocs']]
+r1 <- roc[[1]]
+plot.roc(r1,print.auc=TRUE,
+         auc.polygon=TRUE,
+         grid=c(0.1, 0.2),
+         grid.col=c("green", "red"),
+         max.auc.polygon=TRUE,
+         auc.polygon.col="lightblue",
+         print.thres=TRUE,
+         main= 'ROC Curve')
+obs <- test$yesno
+caret::postResample(p2, obs)
+```
+
+
+```{r}
+### Modelling with package caret
+caret.rpart <- train(yesno ~ ., method = "rpart", data = train, 
+                     tuneLength = 20,
+                     trControl = trainControl(method = "cv", number = 10)) 
+ggplot(caret.rpart)
+rpart.plot(caret.rpart$finalModel)
+
+caret.rpart <- train(yesno ~ ., method = "rpart", data = train, 
+                     tuneLength = 20,
+                     trControl = trainControl(method = "cv", number = 10,
+                                              selectionFunction = "oneSE")) 
+var.imp <- varImp(caret.rpart)
+plot(var.imp)
+pred <- predict(caret.rpart, newdata = test)
+## p.est <- predict(caret.rpart, newdata = test, type = "prob")
+```
+
+
+```{r}
+#### Modelling with Conditional trees
+tree2 <- ctree(yesno ~ ., data = train) 
+plot(tree2)
+```
+
+
+```{r}
+### Modelling with C5.0
+model <- C5.0(yesno ~., data=train)
+plot(model)
+results <- predict(object=model, newdata=test, type="class")
+table(results, test$yesno)
+```
+
+
+```{r}
+####Comparing
+confusionMatrix(p2, test$yesno, positive="y")
+confusionMatrix(pred, test$yesno,positive="y")
+confusionMatrix(results, test$yesno, positive="y")
+```
+
+
+```{r}
+####Modelling with RandomForest
+###Bagging trees
+library(randomForest)
+bagtrees <- randomForest(yesno ~ ., data = train, mtry = ncol(train) - 1)
+bagtrees
+plot(bagtrees, main = "")
+legend("right", colnames(bagtrees$err.rate), lty = 1:5, col = 1:6)
+pred2 <- predict(bagtrees, newdata = test)
+caret::confusionMatrix(pred2, test$yesno, positive="y")
+###Random Forest
+rf <- randomForest(yesno ~ ., data = train)
+plot(rf,main="")
+legend("right", colnames(rf$err.rate), lty = 1:5, col = 1:6)
+importance(rf)
+varImpPlot(rf)
+pred3 <- predict(rf, newdata = test)
+caret::confusionMatrix(pred3, test$yesno,positive="y") ###Best performance so far
+```
+
+
+```{r}
+####Random Forest with caret 
+rf.caret <- train(yesno ~ ., data = train, method = "rf")
+plot(rf.caret)
+
+##mtry could be fitted by using mtry by default, mrty/2 and 2*mtry. Remember mrty by default is sqrt(p)-->classification and p/3 for regression problems.
+### Also ntrees could be fitted by "playing" with different values for it.
+mtry.class <- sqrt(ncol(train) - 1)
+tuneGrid <- data.frame(mtry = floor(c(mtry.class/2, mtry.class, 2*mtry.class)))
+set.seed(1)
+rf.caret <- train(yesno ~ ., data = train,method = "rf", tuneGrid = tuneGrid)
+plot(rf.caret)
+
+###NOTES: you can also fit parameters by using tuneLength or tuneGrid (package caret).
+#### To check more advanced techniques,please search for: ada, adabag, mboost, gbm, xgboos in R.
+#### Be careful with unbalanced datasets (classification problems)
+#### here strategies to deal with the problem
+####https://www.r-bloggers.com/2017/04/dealing-with-unbalanced-data-in-machine-learning/
+####https://www.analyticsvidhya.com/blog/2016/03/practical-guide-deal-imbalanced-classification-problems/
+
+
+```

@@ -1,0 +1,188 @@
+---
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r}
+library(cluster)
+library(factoextra)
+library(fpc)
+library(NbClust)
+library(rgl)
+```
+
+```{r}
+dd <- read.csv("Playstore-preprocessed.csv", sep=",",dec=".",stringsAsFactors=TRUE)
+names(dd)
+dim(dd)
+summary(dd)
+
+#set a list of numerical variables
+num_col <- unlist(lapply(dd,is.numeric))
+dcon <- dd[,num_col]
+dim(dcon)
+
+dcon$Rating.Count <- log(dcon$Rating.Count)
+dcon$DaysLastUpdate <- log(dcon$DaysLastUpdate+0.01)
+dcon$ReleasedDays <- log(dcon$ReleasedDays+0.01)
+
+data <- scale(dcon[,c(2:8)])
+
+```
+
+```{r}
+fviz_nbclust(data, kmeans, method = "silhouette")+ labs(subtitle = "Silhouette method")
+fviz_nbclust(data, kmeans, method = "wss",k.max=10) + geom_vline(xintercept = 4, linetype = 2)+  labs(subtitle = "Elbow method")
+```
+
+
+```{r}
+# k = 2
+set.seed(123)
+km_clusters_k2 <- kmeans(x = data, centers = 2, nstart = 50)
+fviz_cluster(object = km_clusters_k2, data = data, show.clust.cent = TRUE,
+             ellipse.type = "euclid", star.plot = TRUE, repel = TRUE) +
+  labs(title = "Results clustering K-means") +  theme_bw() +  theme(legend.position = "none")
+
+a<-which(km_clusters_k2$cluster==1)
+b<-which(km_clusters_k2$cluster==2)
+
+km_clusters_k2$cluster[a]<-"CLUSTER 1"
+km_clusters_k2$cluster[b]<-"CLUSTER 2"
+
+print(km_clusters_k2)
+```
+
+```{r}
+# k = 4
+set.seed(123)
+km_clusters_k4 <- kmeans(x = data, centers = 4, nstart = 50)
+fviz_cluster(object = km_clusters_k4, data = data, show.clust.cent = TRUE,
+             ellipse.type = "euclid", star.plot = TRUE, repel = TRUE) +
+  labs(title = "Results clustering K-means") +  theme_bw() +  theme(legend.position = "none")
+
+a<-which(km_clusters_k4$cluster==1)
+b<-which(km_clusters_k4$cluster==2)
+c<-which(km_clusters_k4$cluster==3)
+d<-which(km_clusters_k4$cluster==4)
+
+km_clusters_k4$cluster[a]<-"CLUSTER 1"
+km_clusters_k4$cluster[b]<-"CLUSTER 2"
+km_clusters_k4$cluster[c]<-"CLUSTER 3"
+km_clusters_k4$cluster[d]<-"CLUSTER 4"
+
+print(km_clusters_k4)
+```
+
+```{r}
+# k = 3
+set.seed(123)
+km_clusters_k3 <- kmeans(x = data, centers = 3, nstart = 50)
+fviz_cluster(object = km_clusters_k3, data = data, show.clust.cent = TRUE,
+             ellipse.type = "euclid", star.plot = TRUE, repel = TRUE) +
+  labs(title = "Results clustering K-means") +  theme_bw() +  theme(legend.position = "none")
+
+a<-which(km_clusters_k3$cluster==1)
+b<-which(km_clusters_k3$cluster==2)
+c<-which(km_clusters_k3$cluster==3)
+
+km_clusters_k3$cluster[a]<-"CLUSTER 1"
+km_clusters_k3$cluster[b]<-"CLUSTER 2"
+km_clusters_k3$cluster[c]<-"CLUSTER 3"
+
+print(km_clusters_k3)
+```
+
+
+```{r}
+clara_clusters_k2 <- clara(x = data, k = 2, metric = "manhattan", stand = TRUE,
+                        samples = 50, pamLike = TRUE)
+clara_clusters_k2
+fviz_cluster(object = clara_clusters_k2, ellipse.type = "t", geom = "point",pointsize = 2.5) +
+    theme_bw() +
+    labs(title = "Results clustering CLARA") +
+    theme(legend.position = "none")
+
+a<-which(clara_clusters_k2$cluster==1)
+b<-which(clara_clusters_k2$cluster==2)
+
+clara_clusters_k2$cluster[a]<-"CLUSTER 1"
+clara_clusters_k2$cluster[b]<-"CLUSTER 2"
+```
+
+```{r}
+clara_clusters_k4 <- clara(x = data, k = 4, metric = "manhattan", stand = TRUE,
+                        samples = 50, pamLike = TRUE)
+clara_clusters_k4
+fviz_cluster(object = clara_clusters_k4, ellipse.type = "t", geom = "point",pointsize = 2.5) +
+    theme_bw() +
+    labs(title = "Results clustering CLARA") +
+    theme(legend.position = "none")
+
+a<-which(clara_clusters_k4$cluster==1)
+b<-which(clara_clusters_k4$cluster==2)
+c<-which(clara_clusters_k4$cluster==3)
+d<-which(clara_clusters_k4$cluster==4)
+
+clara_clusters_k4$cluster[a]<-"CLUSTER 1"
+clara_clusters_k4$cluster[b]<-"CLUSTER 2"
+clara_clusters_k4$cluster[c]<-"CLUSTER 3"
+clara_clusters_k4$cluster[d]<-"CLUSTER 4"
+```
+
+```{r}
+clara_clusters_k3 <- clara(x = data, k = 3, metric = "manhattan", stand = TRUE,
+                        samples = 50, pamLike = TRUE)
+clara_clusters_k3
+fviz_cluster(object = clara_clusters_k3, ellipse.type = "t", geom = "point",pointsize = 2.5) +
+    theme_bw() +
+    labs(title = "Results clustering CLARA") +
+    theme(legend.position = "none")
+
+a<-which(clara_clusters_k3$cluster==1)
+b<-which(clara_clusters_k3$cluster==2)
+c<-which(clara_clusters_k4$cluster==3)
+
+clara_clusters_k3$cluster[a]<-"CLUSTER 1"
+clara_clusters_k3$cluster[b]<-"CLUSTER 2"
+clara_clusters_k4$cluster[c]<-"CLUSTER 3"
+```
+
+
+```{r}
+dcon$k2 <- as.factor(km_clusters_k2$cluster)
+dcon$k3 <- as.factor(km_clusters_k3$cluster)
+dcon$k4 <- as.factor(km_clusters_k4$cluster)
+dcon$clara_k2 <- as.factor(clara_clusters_k2$cluster)
+dcon$clara_k3 <- as.factor(clara_clusters_k3$cluster)
+dcon$clara_k4 <- as.factor(clara_clusters_k4$cluster)
+summary(dcon)
+
+colN <- colnames(dcon)
+
+for(i in c(1:(length(colN)))) {
+  boxplot(dcon[,i]~dcon$k2, horizontal=FALSE, main=paste("k2: ",colN[i]))
+}
+
+for(i in c(1:(length(colN)))) {
+  boxplot(dcon[,i]~dcon$k3, horizontal=FALSE, main=paste("k3: ",colN[i]))
+}
+
+for(i in c(1:(length(colN)))) {
+  boxplot(dcon[,i]~dcon$k4, horizontal=FALSE, main=paste("k4: ",colN[i]))
+}
+
+for(i in c(1:(length(colN)))) {
+  boxplot(dcon[,i]~dcon$clara_k2, horizontal=FALSE, main=paste("clara_k2: ",colN[i]))
+}
+
+for(i in c(1:(length(colN)))) {
+  boxplot(dcon[,i]~dcon$clara_k3, horizontal=FALSE, main=paste("clara_k3: ",colN[i]))
+}
+
+for(i in c(1:(length(colN)))) {
+  boxplot(dcon[,i]~dcon$clara_k4, horizontal=FALSE, main=paste("clara_k4: ",colN[i]))
+}
+
+```

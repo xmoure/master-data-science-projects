@@ -1,0 +1,158 @@
+---
+title: "R Notebook"
+output: html_notebook
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r}
+dd <- read.table("Playstore-preprocessed.csv",header=T, sep=",");
+dd_or <- dd
+library(ggplot2)
+library(arules)
+library(arulesViz)
+```
+
+
+```{r}
+
+sapply(dd,class)
+for(i in c(1,5,6,7,8)) { 
+  dd[,i]<-as.factor(dd[,i]) #ordered=TRUE
+}
+
+
+levels(dd$Minimum.Android)
+levMinimumAndroid<- as.factor(c("<4","<4","<4","4","5",">5",">5",">5"))
+levels(dd$Minimum.Android) <- levMinimumAndroid
+
+levels(dd$Content.Rating)
+levContentRating<- as.factor(c("Everyone","AgeRestricted","AgeRestricted","AgeRestricted","AgeRestricted"))
+levels(dd$Content.Rating) <- levContentRating
+
+
+
+
+colN <- colnames(dd);colN
+
+
+for(i in c(2,3,4,9,10,11,12)) {
+  #dd[,i]<-cut(dd[,i],5)
+  dd[,i]<-discretize(dd[,i], breaks=3)
+  levels(dd[,i]) <- c(paste(colN[i],"Low"),paste(colN[i],"Mid"),paste(colN[i],"High"))
+}
+
+dd$RatingAPP <- dd$Rating
+dd$Rating <- NULL
+
+sapply(dd,class)
+summary(dd)
+```
+
+```{r}
+
+dtrans<-as(dd, "transactions")
+summary(dtrans)
+
+freq_items<- sort(itemFrequency(dtrans),decreasing = TRUE)
+barplot(freq_items,length(freq_items))
+min_supp1 <- as.numeric(freq_items[5]/2); min_supp1 
+min_supp2 <- 0.25
+min_supp3 <- 0.125
+abline(h=min_supp1, col="blue", lty=2)
+abline(h=min_supp2, col="red", lty=2)
+abline(h=min_supp3, col="green", lty=2)
+
+```
+
+```{r}
+
+rulesDtrans <- apriori(dtrans, parameter = list(support = min_supp3, confidence = 0.5,  minlen=1))
+#0.2, 0.7, 1.35     no rating   16
+#0.1, 0.6, 1.6      no rating   12
+#0.07, 0.55, 1.2    ranting     8
+filtred_rules <- subset(rulesDtrans, subset = lift > 1.2 )
+
+rating_rules <- subset(filtred_rules, subset = rhs %pin% "RatingAPP")
+installs_rules <- subset(filtred_rules, subset = rhs %pin% "Installs" & lift > 2)
+installs_rules_no_rating <- subset(filtred_rules, subset = rhs %pin% "Installs" & ! lhs %pin% "Rating.Count")
+
+nonr_rules  <- filtred_rules[!is.redundant(filtred_rules)]              
+nonr_rating_rules  <- rating_rules[!is.redundant(rating_rules)]
+nonr_installs_rules  <- installs_rules[!is.redundant(installs_rules)]
+nonr_installs_rules_no_rating  <- installs_rules_no_rating[!is.redundant(installs_rules_no_rating)]
+
+summary(nonr_rules)
+inspect(head(nonr_rules, by='confidence',20))
+
+summary(nonr_rating_rules)
+inspect(head(nonr_rating_rules, by='lift',10))
+
+summary(nonr_installs_rules)
+inspect(head(nonr_installs_rules, by='lift',10))
+
+summary(nonr_installs_rules_no_rating)
+inspect(head(nonr_installs_rules_no_rating, by='lift',10))
+
+```
+
+```{r}
+plot(nonr_rating_rules, method = "graph", engine = "htmlwidget")
+plot(nonr_installs_rules, method = "graph", engine = "htmlwidget")
+plot(nonr_installs_rules_no_rating, method = "graph", engine = "htmlwidget")
+
+nonr_rules_ad <- subset(nonr_rules, subset = rhs %pin% "Ad.Supported" & confidence > 0.773)
+plot(nonr_rules_ad, method = "graph", engine = "htmlwidget")
+
+nonr_rules_android <- subset(nonr_rules, subset = rhs %pin% "Minimum.Android" & confidence > 0.773)
+plot(nonr_rules_android, method = "graph", engine = "htmlwidget")
+
+
+```
+
+
+```{r}
+# inverted lift, nothing interesting
+inv_filtred_rules <- subset(rulesDtrans, subset = 0.8 > lift)
+
+inv_rating_rules <- subset(inv_filtred_rules, subset = rhs %pin% "RatingAPP")
+inv_installs_rules <- subset(inv_filtred_rules, subset = rhs %pin% "Installs" & ! lhs %pin% "Content.Rating")
+
+inv_nonr_rules  <- inv_filtred_rules[!is.redundant(inv_filtred_rules)]              
+inv_nonr_rating_rules  <- inv_rating_rules[!is.redundant(inv_rating_rules)]
+inv_nonr_installs_rules  <- inv_installs_rules[!is.redundant(inv_installs_rules)]
+
+summary(inv_nonr_rules)
+inspect(tail(inv_nonr_rules, by='lift',10))
+
+summary(inv_nonr_rating_rules)
+inspect(tail(inv_nonr_rating_rules, by='lift',10))
+
+summary(inv_nonr_installs_rules)
+inspect(tail(inv_nonr_installs_rules, by='lift',10))
+
+
+```
+
+
+```{r}
+summary(dd)
+
+dd_or$DRating <- dd$RatingAPP 
+ggplot(dd_or,aes(x=Rating)) + geom_histogram(aes(color=DRating,fill=DRating,alpha=0.4),position = "identity", bins = 36)
+
+
+
+num_names <- c("Rating.Count", "Size", "DaysLastUpdate", "ReleasedDays", "AppNameLen", "Installs")
+for(i in num_names) {
+  dd_or[paste("D",i,sep = "")]<-dd[i]
+  dd_or[i] <- log(dd_or[i])
+}
+dd_or$Rating.Count <- log(dd_or$Rating.Count)
+dd_or$DRating.Count <- dd$Rating.Count
+ggplot(dd_or,aes(x=Rating.Count,stat="count")) + geom_histogram(aes(color=DRating.Count,fill=DRating.Count,alpha=0.4), bins = 30)
+
+#ggplot(dd_or,aes(x=Size,stat="count")) + geom_histogram(aes(color=DSize,fill=DSize,alpha=0.4), bins = 30)
+
+
+```

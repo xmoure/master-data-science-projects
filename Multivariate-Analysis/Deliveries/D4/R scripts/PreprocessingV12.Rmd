@@ -1,0 +1,600 @@
+---
+title: "D2 MVA"
+output: html_notebook
+editor_options: 
+  chunk_output_type: console
+---
+ 
+ Open dataset
+
+```{r}
+library("rstudioapi")
+library('ggplot2')
+library(missMDA)
+library(chron)
+library(stringr)
+library('finalfit')
+library(UpSetR)
+library("mice")
+library("naniar")
+script_dir <- getSourceEditorContext()$path 
+setwd(dirname(script_dir))
+dd <- read.table("Playstore-reduced.csv",header=T, sep=",");
+#Some code for temporal
+lct <- Sys.getlocale("LC_TIME"); Sys.setlocale("LC_TIME", "C")
+```
+
+```{r}
+class(dd)
+dim(dd)
+n<-dim(dd)[1]
+n
+K<-dim(dd)[2]
+K
+names(dd)
+str(dd)
+summary(dd)
+```
+
+
+Numerical variables: Rating (4), Rating.Count (5), Minimum.Installs (7), Maximum.Installs (8), Price (10)
+
+Binary variables: Free (9),Ad.Supported (21), In.App.Purchases (22), Editors.Choice (23)
+
+Qualitative variables: App.Name (1), App.Id (2), Category (3), Installs (6), Currency (11) ,Size (12), Minimum.Android (13), Developer.Id (14), Developer.Website (15), Developer.Email (16), Content.Rating (19), Privacy.Policy (20)
+
+Temporal: Released (17), Last.Updated (18), Scraped.Time (24) 
+
+
+
+Feature selection: filtering the uninteresting variables
+```{r}
+#Removing irrevalent columns for our analisis
+
+head(summary(dd$App.Id), n = 6)
+
+head(summary(dd$Developer.Id), n = 6)
+
+head(summary(dd$Developer.Website), n = 6)
+
+head(summary(dd$Developer.Email), n = 6)
+
+head(summary(dd$Installs), n = 6)
+
+head(summary(dd$Privacy.Policy), n = 6)
+
+drop <- c("App.Id", "Developer.Id", "Developer.Website", "Developer.Email", "Installs", "Privacy.Policy")
+dd = dd[,!(names(dd) %in% drop)]
+
+```
+
+
+Feature extraction: deriving new variables(DaysLastUpdate,ReleasedDays,AppNameLen)
+
+```{r}
+#Released
+dd$Released <- as.Date(dd$Released,format='%b %d, %Y')
+summary(dd$Released)
+
+#Last.Updated
+dd$Last.Updated <- as.Date(dd$Last.Updated,format='%b %d, %Y')
+summary(dd$Last.Updated)
+
+#Scraped.Time
+dtparts = t(as.data.frame(strsplit(dd$Scraped.Time,' ')))
+row.names(dtparts) = NULL
+dd$Scraped.Time = chron(dates=dtparts[,1],format='y-m-d')
+summary(dd$Scraped.Time)
+
+dd$DaysLastUpdate <- as.numeric(difftime(dd$Scraped.Time,dd$Last.Updated,units="days"))
+dd$ReleasedDays <- as.numeric(difftime(dd$Scraped.Time,dd$Released,units="days"))
+
+drop <- c("Released", "Last.Updated", "Scraped.Time")
+dd<-  dd[,!(names(dd) %in% drop)]
+
+
+
+appNameLen<-str_length(dd$App.Name)
+summary(appNameLen)
+dd$AppNameLen <- str_length(dd$App.Name)
+drop <- c("App.Name")
+dd<-  dd[,!(names(dd) %in% drop)]
+
+
+```
+
+
+Transformations;
+-Recoding (numeric -> categorical)
+-Quantifying a nominal variable (categ. -> numeric))
+
+```{r}
+#Size(categorical -> numeric)
+dd$Size[dd$Size == "Varies with device"] <- NA
+size_kb <- grepl("k", dd$Size)
+
+dd$Size <- gsub("M", "", dd$Size)
+dd$Size <- gsub("k", "", dd$Size)
+dd$Size <- gsub(",", "", dd$Size)
+
+dd$Size[size_kb] = as.character(as.numeric(dd$Size[size_kb])/1000.0)
+dd$Size <- as.numeric(dd$Size)
+summary(dd$Size)
+
+```
+
+
+```{r}
+#We set qualitative variables as factors
+names(dd)
+#Ordinal: Minimum.Android (13), Content.Rating (19)
+dd$Minimum.Android<-as.factor(dd$Minimum.Android)
+dd$Content.Rating<-as.factor(dd$Content.Rating)
+
+summary(dd$Minimum.Android)
+summary(dd$Content.Rating)
+
+#Binary variables: Free (6),Ad.Supported (12), In.App.Purchases (13), Editors.Choice (14)
+for(i in c(6,12,13,14)) {
+  dd[,i]<-as.factor(dd[,i])
+}
+
+summary(dd$Free)
+
+summary(dd$Ad.Supported)
+
+summary(dd$In.App.Purchases)
+
+summary(dd$Editors.Choice)
+
+
+```
+
+
+Reducing qualitative variables modalities:
+Category (3),Currency (11) , Minimum.Android (13), Content.Rating (19)
+
+```{r}
+#Category
+#Modalities: Educational, Lifestyle,SocialMedia, Productivity, Entertainment, Game
+
+CatEducational <- c("Books & Reference","Education","Educational","Libraries & Demo","Maps & Navigation","Medical","Parenting","Art & Design","Business","Finance")
+
+CatLifestyle <- c("Food & Drink","Health & Fitness","House & Home","Lifestyle","Personalization","Travel & Local","Shopping","Dating","Photography","Sports","Beauty","News & Magazines","Weather")
+
+CatSocialMedia <- c("Communication","Social","Word")
+
+CatProductivity <- c("Productivity","Tools","Board")
+
+CatEntertainment <- c("Comics","Entertainment","Events","Music","Music & Audio","Video Players & Editors","Auto & Vehicles")
+
+CatGame <- c("Action","Adventure","Arcade","Card","Casino","Casual","Puzzle","Racing","Role Playing","Simulation","Strategy","Trivia")
+
+dd$Category[dd$Category %in% CatEducational] <- "Educational"
+dd$Category[dd$Category %in% CatLifestyle] <- "Lifestyle"
+dd$Category[dd$Category %in% CatSocialMedia] <- "SocialMedia"
+dd$Category[dd$Category %in% CatProductivity] <- "Productivity"
+dd$Category[dd$Category %in% CatEntertainment] <- "Entertainment"
+dd$Category[dd$Category %in% CatGame] <- "Game"
+
+dd$Category<-as.factor(dd$Category)
+summary(dd$Category)
+
+
+#Minimum.Android
+
+lebAndroid <- as.factor(c("MinimumAndroidUnknown","1.0","1.0","1.0","1.0","2.0","2.0","2.0","2.0","2.0","2.0","2.0","3.0","3.0","3.0","4.0","4.0","4.0","4.0","4.0","4.0","4.0","4.0","4.0","4.0","5.0","5.0","6.0","7.0","7.0","8.0","MinimumAndroidUnknown"))
+levels(dd$Minimum.Android) <- lebAndroid
+summary(dd$Minimum.Android)
+barplot(table(dd$Minimum.Android))
+
+
+#Currency
+dd$Currency <- as.factor(dd$Currency)
+levCurrency <- levels(dd$Currency)
+levCurrency[levCurrency == ""] = "CurrencyUnknown"
+levCurrency[levCurrency == "XXX"] = "CurrencyUnknown"
+levels(dd$Currency) <- levCurrency
+summary(dd$Currency)
+
+#Content.Rating
+summary(dd$Content.Rating)
+
+
+```
+
+
+Numerical variables: Rating (4), Rating.Count (5), Minimum.Installs (7), Maximum.Installs (8), Price (10)
+
+```{r}
+
+#Rating
+summary(dd$Rating)
+boxplot(dd$Rating)
+hist(dd$Rating,50)
+
+HighRating_RatingCount <- dd$Rating.Count[dd$Rating == 5]
+hist(log10(HighRating_RatingCount),10)
+summary(HighRating_RatingCount)
+summary(dd$Rating.Count)
+
+plot(dd$Rating,dd$Rating.Count)
+
+#Rating.Count
+summary(dd$Rating.Count)
+boxplot(dd$Rating.Count)
+hist(dd$Rating.Count,100)
+
+log_RatingCount <-log10(dd$Rating.Count)
+summary(log_RatingCount)
+boxplot(log_RatingCount)
+hist(log_RatingCount,100)
+
+head(sort(dd$Rating.Count,decreasing = TRUE))
+dd$Rating.Count[dd$Rating.Count > 2000000] <- NA
+
+#Minimum.Installs
+summary(dd$Minimum.Installs)
+boxplot(dd$Minimum.Installs)
+hist(dd$Minimum.Installs,100)
+
+log_MinimumInstalls <-log10(dd$Minimum.Installs + 1)
+summary(log_MinimumInstalls)
+boxplot(log_MinimumInstalls)
+hist(log_MinimumInstalls,100)
+
+#Maximum.Installs
+summary(dd$Maximum.Installs)
+boxplot(dd$Maximum.Installs)
+hist(dd$Maximum.Installs,100)
+
+log_MaximumInstalls <-log10(dd$Maximum.Installs + 1)
+summary(log_MaximumInstalls)
+boxplot(log_MaximumInstalls)
+hist(log_MaximumInstalls,100)
+
+head(sort(dd$Maximum.Installs,decreasing = TRUE))
+dd$Maximum.Installs[dd$Maximum.Installs > 200000000] <- NA
+
+#Price
+summary(dd$Price)
+boxplot(dd$Price)
+hist(dd$Price,100)
+
+Price_no_0 <- dd$Price[dd$Price > 0]
+summary(Price_no_0)
+boxplot(Price_no_0)
+hist(Price_no_0,20)
+
+log_Price <-log10(dd$Price + 1)
+summary(log_Price)
+boxplot(log_Price)
+hist(log_Price,100)
+
+log_Price_no_0 <-log10(Price_no_0 + 1)
+summary(log_Price_no_0)
+boxplot(log_Price_no_0)
+hist(log_Price_no_0,10)
+
+
+#DaysLastUpdate
+summary(dd$DaysLastUpdate)
+boxplot(dd$DaysLastUpdate)
+hist(dd$DaysLastUpdate,100)
+
+log_DaysLastUpdate <-log10(dd$DaysLastUpdate + 1)
+summary(log_DaysLastUpdate)
+boxplot(log_DaysLastUpdate)
+hist(log_DaysLastUpdate,20)
+
+```
+
+Removing duplicated rows
+```{r}
+#we first check how many duplicted there are
+dim(dd[!duplicated(dd),])
+#Removing duplicated rows
+dd <- dd[!duplicated(dd),]
+#checking dataset size after deduplication
+dim(dd[!duplicated(dd),])
+#there is no duplicated column
+```
+
+
+
+Comparison between free and payment Apps 
+```{r}
+pay <- dd[dd$Price > 0,]
+
+free <- dd[dd$Price == 0,]
+
+ks.test(pay$Rating,free$Rating)$p.value
+
+ks.test(pay$Rating.Count,free$Rating.Count)$p.value
+ks.test(pay$Minimum.Installs,free$Minimum.Installs)$p.value
+ks.test(pay$Maximum.Installs,free$Maximum.Installs)$p.value
+ks.test(pay$DaysLastUpdate,free$DaysLastUpdate)$p.value
+ks.test(pay$Size,free$Size)$p.value
+
+dim(pay)
+dim(free)
+
+```
+
+
+```{r}
+#according to the test result, there is difference between free and payment apps
+#we decide to analyze only free apps
+dd <- dd[dd$Free =='True',]
+#deleting irrevalent columns 
+drop <- c("Currency", "Free", "Price", "Editors.Choice")
+dd<-  dd[,!(names(dd) %in% drop)]
+```
+
+
+```{r}
+dd$Installs <- dd$Maximum.Installs
+drop <- c("Maximum.Installs", "Minimum.Installs")
+dd<-  dd[,!(names(dd) %in% drop)]
+```
+
+
+The little test
+```{r}
+
+dd_new=dd
+#rename 'unknown' factor level
+levels(dd_new$Minimum.Android)[levels(dd_new$Minimum.Android)=='MinimumAndroidUnknown'] <- NA
+summary(dd_new$Minimum.Android)
+
+dd_new %>% 
+  ff_glimpse()
+
+
+
+```
+
+Missing data type
+```{r}
+
+
+dependent<-c('Rating','Rating.Count','Size','Minimum.Android','ReleasedDays')
+explanatory<- c('Category','Content.Rating','Ad.Supported','In.App.Purchases','DaysLastUpdate','AppNameLen','Installs')
+
+dd_new %>% 
+  missing_pattern(dependent,explanatory)
+
+gg_miss_upset(dd_new)
+
+newdata1 <- dd_new[order(dd_new$Category),]
+n1<-gg_miss_case_cumsum(newdata1)
+
+newdata2 <- dd_new[order(dd_new$Rating),]
+n2<-gg_miss_case_cumsum(newdata2)
+
+newdata3 <- dd_new[order(dd_new$Rating.Count),]
+n3<-gg_miss_case_cumsum(newdata3)
+
+newdata4 <- dd_new[order(dd_new$Size),]
+n4<-gg_miss_case_cumsum(newdata4)
+
+newdata5 <- dd_new[order(dd_new$Minimum.Android),]
+n5<-gg_miss_case_cumsum(newdata5)
+
+newdata6 <- dd_new[order(dd_new$Content.Rating),]
+n6<-gg_miss_case_cumsum(newdata6)
+
+newdata7 <- dd_new[order(dd_new$Ad.Supported),]
+n7<-gg_miss_case_cumsum(newdata7)
+
+newdata8 <- dd_new[order(dd_new$In.App.Purchases),]
+n8<-gg_miss_case_cumsum(newdata8)
+
+newdata9 <- dd_new[order(dd_new$DaysLastUpdate),]
+n9<-gg_miss_case_cumsum(newdata9)
+
+newdata10 <- dd_new[order(dd_new$ReleasedDays),]
+n10<-gg_miss_case_cumsum(newdata10)
+
+newdata11 <- dd_new[order(dd_new$AppNameLen),]
+n11<-gg_miss_case_cumsum(newdata11)
+
+newdata12 <- dd_new[order(dd_new$Installs),]
+n12<-gg_miss_case_cumsum(newdata12)
+
+ggpubr::ggarrange(n1,n2,n3,n4,n5,n6,n7,n8,n9,n10,n11,n12)
+
+
+numericalVariablesIndex <- which(sapply(newdata12,is.numeric))
+numericalVariablesIndex
+mcar_test(newdata12[,numericalVariablesIndex])
+
+```
+
+Rating
+```{r}
+dd_new %>% 
+  missing_compare(dependent[1],explanatory)
+
+gr<-ggplot(dd_new,
+       aes(x = Rating,
+           y = Installs)) +
+  geom_miss_point()
+
+```
+
+Rating.Count
+```{r}
+dd_new %>% 
+  missing_compare(dependent[2],explanatory)
+
+gc<-ggplot(dd_new,
+       aes(x = Rating.Count,
+           y = Installs)) +
+  geom_miss_point()
+```
+
+Size
+```{r}
+dd_new %>% 
+  missing_compare(dependent[3],explanatory)
+
+gs<-ggplot(dd_new,
+       aes(x = Size,
+           y = Installs)) +
+  geom_miss_point()
+```
+
+Minimum.Android
+```{r}
+dd_new %>% 
+  missing_compare(dependent[4],explanatory)
+
+gm<-ggplot(dd_new,
+       aes(x = Minimum.Android,
+           y = Installs)) +
+  geom_miss_point()
+```
+
+ReleasedDays
+```{r}
+dd_new %>% 
+  missing_compare(dependent[5],explanatory)
+
+gd<-ggplot(dd_new,
+       aes(x = ReleasedDays,
+           y = Installs)) +
+geom_miss_point()
+
+ggpubr::ggarrange(gr,gc,gs,gm,gd)
+```
+
+Numerical variables imputation
+```{r}
+
+dd_imputation<-dd
+
+#imputation of numeric missing values
+numericalVariablesIndex <- which(sapply(dd,is.numeric))
+numericalVariablesIndex
+
+
+dd$Installs<-log(dd$Installs+1)
+dd$Size<-log(dd$Size+1)
+dd$Rating.Count<-log(dd$Rating.Count+1)
+numericas<-dd[,numericalVariablesIndex]
+
+res.mice <- mice(numericas,m=10)
+str(res.mice)
+res.mice$data # Original dataset
+completed<-complete(res.mice) # Data frame containing completed data set
+
+summary(completed)
+
+
+#completed$Installs<-exp(completed$Installs)-1
+
+##correlation map of numerical variables
+Correlations <- cor(completed)
+print(Correlations)
+corrplot::corrplot(Correlations) 
+corrplot::corrplot(Correlations, method = "number",number.cex = 0.75) 
+
+dd[,numericalVariablesIndex]<-completed
+```
+
+
+Comparison between populations before and after the imputation of missing data
+```{r}
+par(mfrow=c(1,2))
+hist(numericas[,1],main='Rating')
+hist(completed$Rating,main='Rating')
+
+par(mfrow=c(1,2))
+hist(numericas[,2],main='Rating.Count')
+hist(completed$Rating.Count,main='Rating.Count')
+
+par(mfrow=c(1,2))
+hist(numericas[,3],main='Size')
+hist(completed$Size,main='Size')
+
+par(mfrow=c(1,2))
+hist(numericas[,4],main='DaysLastUpdate')
+hist(completed$DaysLastUpdate,main='DaysLastUpdate')
+
+par(mfrow=c(1,2))
+hist(numericas[,5],main='ReleasedDays')
+hist(completed$ReleasedDays,main='ReleasedDays')
+
+par(mfrow=c(1,1))
+
+```
+
+Categorical variables imputation
+```{r}
+categoricalVariables <- which(sapply(dd,is.factor))
+
+categoricalVariables
+
+#res.mca<-imputeMCA(dd_new[,categoricalVariables])
+res.mice<-mice(dd_new[,categoricalVariables],m=10)
+completed<-complete(res.mice) 
+summary(completed)
+
+par(mfrow=c(1,2))
+barplot(prop.table(table(dd[,5])),ylim=c(0,0.9),main="Android_Before")
+barplot(prop.table(table(completed[,2])),ylim=c(0,0.9),main="Android_After")
+par(mfrow=c(1,1))
+
+dd[,categoricalVariables]<-completed
+summary(dd)
+```
+
+Filtering by rating count>20
+```{r}
+dd1 <- dd[dd$Rating.Count < 20 | is.na(dd$Rating.Count),]
+ddout <- dd1[,c(1,2,3,4,9,10,11,12)]
+
+dd$Rating.Count<-exp(dd$Rating.Count)-1
+summary(dd$Rating.Count)
+high <- dd[dd$Rating.Count >= 20,]
+low <- dd[dd$Rating.Count < 20,]
+
+ks.test(high$Rating,low$Rating)$p.value
+ks.test(high$DaysLastUpdate,low$DaysLastUpdate)$p.value
+ks.test(high$Size,low$Size)$p.value
+
+hist(low$Rating,50)
+hist(high$Rating,50)
+#we keep only rows with rating count greater or equal than 20 
+dd <- dd[dd$Rating.Count >= 20 | is.na(dd$Rating.Count),]
+dd$Rating.Count<-log(dd$Rating.Count+1)
+```
+
+Multivariate outlier detection and treatment
+```{r}
+X=dd[,numericalVariablesIndex]
+X
+mdi = mahalanobis(X,center=apply(X,2,mean),cov=var(X))
+plot(density(mdi))
+cutoff <- qchisq(p = 0.99 , ncol(X))
+## Display observation whose distance greater than cutoff value
+X[mdi>cutoff,]
+#Z<-data.frame(X[mdi>cutoff,],dd[mdi>cutoff,1]
+outliers<-data.frame(X[mdi>cutoff,],dd[mdi>cutoff,1])
+
+names(outliers)[names(outliers) == 'dd.mdi...cutoff..1.'] <- 'Category'
+
+doutliers <- rbind(ddout, outliers)
+write.csv(doutliers, file.path(getwd(), "Playstore-outliers.csv"), row.names = FALSE)
+
+dd<-dd[!(rownames(dd) %in% rownames(outliers)),]
+summary(dd)
+
+write.csv(dd, file.path(getwd(), "Playstore-preprocessed.csv"), row.names = FALSE)
+```
+
+
+
+
+

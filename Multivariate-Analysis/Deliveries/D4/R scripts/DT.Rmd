@@ -1,0 +1,282 @@
+---
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r}
+set.seed(10)
+```
+
+```{r}
+library(rpart)
+library(rpart.plot) 
+library(tidyverse)
+library(mlbench)
+library(caret)
+library(randomForest)
+```
+
+# ########################## CLASSIFICATION ##########################
+
+#DATA 
+```{r}
+dd <- read.table("Playstore-tree.csv",header=T, sep=",", dec='.',stringsAsFactors=TRUE)
+
+dd$f.rating <- "1.3"
+l <- which(dd$Rating < 3)
+dd$f.rating[l] <- "low (1-3)"
+l <- which(dd$Rating >= 3)
+dd$f.rating[l] <- "high (3-5)"
+dd <- dd[sample(1:nrow(dd)),]
+dd$f.rating <- as.factor(dd$f.rating)
+
+
+table(dd$f.rating)
+l1 <- which(dd$Rating < 3)[1:9683]
+l2 <- which(dd$Rating >= 3)[1:10000]
+dd <- dd[c(l1,l2),]
+table(dd$f.rating)
+
+
+dd$Rating<-NULL
+dd <- dd[sample(1:nrow(dd)), ]
+
+
+ind <- sample(2, nrow(dd), replace = T, prob = c(0.7, 0.3))
+train <- dd[ind == 1,]
+test <- dd[ind == 2,]
+```
+# DESCITION TREE
+
+```{r}
+#tree
+tree <- rpart(f.rating ~ ., data = train, cp = 0,method="class") 
+printcp(tree)
+plotcp(tree)
+
+#minum cp
+head(tree$cptable, 10)
+xerror <- tree$cptable[,"xerror"]
+imin.xerror <- which.min(xerror)
+tree$cptable[imin.xerror, ]
+upper.xerror <- xerror[imin.xerror] + tree$cptable[imin.xerror, "xstd"]
+icp <- min(which(xerror <= upper.xerror))
+cp <- tree$cptable[icp, "CP"]
+tree <- prune(tree, cp = cp)
+tiff("Tree.tiff", width = 4, height = 4, units = 'in', res = 500)
+rpart.plot(tree) 
+
+#confusion matrix
+
+print("----------------TEST------------------")
+pred_test  <- predict(tree, newdata = test, type = "class")
+confusionMatrix(pred_test, test$f.rating)
+
+print("----------------TRAIN------------------")
+pred_train <- predict(tree, data = train, type = "class")
+confusionMatrix(pred_train, train$f.rating)
+```
+
+# BASIC RANDOM FOREST
+
+```{r}
+rf <- randomForest(f.rating ~ ., data = train)
+
+print("----------------TEST------------------")
+pred_test  <- predict(rf, newdata = test, type = "class")
+confusionMatrix(pred_test, test$f.rating)
+
+print("----------------TRAIN------------------")
+pred_train <- predict(rf, data = train, type = "class")
+confusionMatrix(pred_train, train$f.rating)
+```
+
+# RANDOM FOREST TUNNING
+```{r}
+# customRF <- list(type = "Classification", library = "randomForest", loop = NULL)
+# customRF$parameters <- data.frame(parameter = c("mtry", "ntree", "maxnodes"), class = rep("numeric", 3), label = c("mtry", "ntree", "maxnodes"))
+# customRF$grid <- function(x, y, len = NULL, search = "grid") {}
+# customRF$fit <- function(x, y, wts, param, lev, last, weights, classProbs, ...) {
+#   randomForest(x, y, mtry = param$mtry, ntree=param$ntree, maxnodes=param$maxnodes, ...)
+# }
+# customRF$predict <- function(modelFit, newdata, preProc = NULL, submodels = NULL)
+#    predict(modelFit, newdata)
+# customRF$prob <- function(modelFit, newdata, preProc = NULL, submodels = NULL)
+#    predict(modelFit, newdata, type = "prob")
+# customRF$sort <- function(x) x[order(x[,1]),]
+# customRF$levels <- function(x) x$classes
+# 
+# 
+# control <- trainControl(method="repeatedcv", number=3, repeats=3)
+# 
+# tunegrid <- expand.grid(.mtry=c(2,3,4,6), 
+#                         .ntree=c(660,500,1500),
+#                         .maxnodes	= c(30,50,100)
+# )
+# 
+# rf_default <- train(f.rating ~ . , 
+#     data = ddd, 
+#     method = customRF, 
+#     metric = "Accuracy", 
+#     tuneGrid = tunegrid, 
+#     trControl = control
+#   )
+# 
+# print(rf_default)
+```
+# RANDOM FOREST (WITH BEST PARAMETERS)
+
+```{r}
+rf <- randomForest(f.rating ~ ., data = train, mtry = 3,  maxnodes = 80)
+
+#confusion matrix
+
+print("----------------TEST------------------")
+pred_test  <- predict(rf, newdata = test, type = "class")
+confusionMatrix(pred_test, test$f.rating)
+
+print("----------------TRAIN------------------")
+pred_train <- predict(rf, data = train, type = "class")
+confusionMatrix(pred_train, train$f.rating)
+```
+
+# MOST IMPORTANTE VARIABLES
+```{r}
+
+# ##---------- RANDOM FOREST -----------------
+# control <- trainControl(method="repeatedcv", number=5, repeats=3)
+# model <- train(f.rating~., data=dd, method="rf", preProcess="scale", trControl=control)
+# importance <- varImp(model, scale=FALSE)
+# print(importance)
+# plot(importance)
+
+##---------- DESCITION TREE -----------------
+control <- trainControl(method="repeatedcv", number=5, repeats=3)
+model <- train(f.rating~., data=dd, method="rpart", preProcess="scale", trControl=control)
+importance <- varImp(model, scale=FALSE)
+print(importance)
+plot(importance)
+```
+
+# RANDOM FOREST & DESCITION TREE WITH MOST IMPORTANT VARIABLES (---> BEST MODEL)
+
+```{r}
+set.seed(10)
+
+cols <- c("Installs", "Rating.Count", "AppNameLen", "DaysLastUpdate", "ReleasedDays", "Size", "Category", "Rating.Count",  "Minimum.Android", "f.rating")
+
+ddd <- dd[cols]
+
+ind <- sample(2, nrow(ddd), replace = T, prob = c(0.7, 0.3))
+train <- ddd[ind == 1,]
+test <- ddd[ind == 2,]
+```
+
+
+```{r}
+set.seed(10)
+
+#tree
+tree <- rpart(f.rating ~ ., data = train, cp = 0,method="class") 
+# rpart.plot(tree) 
+printcp(tree)
+plotcp(tree)
+
+#minum cp
+head(tree$cptable, 10)
+xerror <- tree$cptable[,"xerror"]
+imin.xerror <- which.min(xerror)
+tree$cptable[imin.xerror, ]
+upper.xerror <- xerror[imin.xerror] + tree$cptable[imin.xerror, "xstd"]
+icp <- min(which(xerror <= upper.xerror))
+cp <- tree$cptable[icp, "CP"]
+tree <- prune(tree, cp = cp)
+tiff("Tree.tiff", width = 4, height = 4, units = 'in', res = 500)
+rpart.plot(tree) 
+
+#confusion matrix
+
+print("----------------TEST------------------")
+pred_test  <- predict(tree, newdata = test, type = "class")
+confusionMatrix(pred_test, test$f.rating)
+
+print("----------------TRAIN------------------")
+pred_train <- predict(tree, data = train, type = "class")
+confusionMatrix(pred_train, train$f.rating)
+
+```
+
+
+```{r}
+set.seed(10)
+
+rf <- randomForest(f.rating ~ . , data = train, mtry = 3, maxnodes = 80)
+
+#confusion matrix
+
+print("----------------TEST------------------")
+pred_test  <- predict(rf, newdata = test, type = "class")
+confusionMatrix(pred_test, test$f.rating)
+
+print("----------------TRAIN------------------")
+pred_train <- predict(rf, data = train, type = "class")
+confusionMatrix(pred_train, train$f.rating)
+```
+
+# ########################## REGRESSION ##########################
+
+#Data
+```{r}
+dd <- read.table("Playstore-tree.csv",header=T, sep=",", dec='.',stringsAsFactors=TRUE)
+dd$f.rating <- NULL
+ind <- sample(2, nrow(dd), replace = T, prob = c(0.7, 0.3))
+train <- dd[ind == 1,]
+test <- dd[ind == 2,]
+```
+
+# Decistion tree
+
+```{r}
+#tree
+tree <- rpart(Rating ~ ., data = train, cp = 0, method="anova") 
+printcp(tree)
+plotcp(tree)
+
+#minimum cp
+head(tree$cptable, 10)
+xerror <- tree$cptable[,"xerror"]
+imin.xerror <- which.min(xerror)
+tree$cptable[imin.xerror, ]
+upper.xerror <- xerror[imin.xerror] + tree$cptable[imin.xerror, "xstd"]
+icp <- min(which(xerror <= upper.xerror))
+cp <- tree$cptable[icp, "CP"]
+tree <- prune(tree, cp = cp)
+tiff("Tree.tiff", width = 4, height = 4, units = 'in', res = 500)
+rpart.plot(tree) 
+
+#confusion matrix
+pred <- predict(tree, test)
+p <- round(pred, digits = 0)
+rmse <- sqrt(mean((test$Rating - p)^2));rmse
+r2 <- (cor(test$Rating, pred))^2;r2
+r2 <- (cor(test$Rating, p))^2;r2
+```
+
+# REGRESSION RANDOM FOREST
+
+```{r}
+
+rf <- randomForest(Rating ~ . , data = train, importance = TRUE, mtry=3, ntree= 100)
+print(rf)
+plot(rf)
+
+pred <- predict(rf, test)
+p <- round(pred, digits = 0)
+rmse <- sqrt(mean((test$Rating - p)^2));rmse
+r2 <- (cor(test$Rating, pred))^2;r2
+r2 <- (cor(test$Rating, p))^2;r2
+```
+
+
+

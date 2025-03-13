@@ -1,0 +1,192 @@
+---
+title: "An"
+output: html_document
+date: "2022-10-08"
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r}
+library("rstudioapi") 
+library(readr)
+library(ggplot2)
+library("rstudioapi")
+script_dir <- getSourceEditorContext()$path 
+setwd(dirname(script_dir))
+dbout <- read.table("Playstore-outliers.csv",header=T, sep=",")
+db <- read.table("Playstore-preprocessed.csv",header=T, sep=",")
+```
+
+Frequency Comparation
+```{r}
+par(mfrow=c(1,2))
+hist(dbout[,2],main='Rating_out')
+hist(db[,2],main='Rating')
+
+hist(log(dbout[,3]+1),main='logRating.Count_out')
+hist(log(db[,3]+1),main='logRating.Count')
+
+hist(log(dbout[,4]+1),main='logSize_out')
+hist(log(db[,4]+1),main='logSize')
+
+hist(dbout[,5],main='DaysLastUpdate_out')
+hist(db[,9],main='DaysLastUpdate')
+
+hist(dbout[,6],main='Releasedbays_out')
+hist(db[,10],main='Releasedbays')
+
+hist(dbout[,7],main='AppNameLen_out')
+hist(db[,11],main='AppNameLen')
+
+hist(log(dbout[,8]+1),main='Installs_out')
+hist(log(db[,12]+1),main='Installs')
+
+barplot(prop.table(table(dbout[,1])),col=c("orange","blue",'magenta','red','green','yellow','brown'),legend.text=c("Educational","Entertainment","Game","Lifestyle",'Productivity','SocialMedia'),ylim=c(0,0.3),main="Category_out")
+barplot(prop.table(table(db[,1])),col=c("orange","blue",'magenta','red','green','yellow','brown'),legend.text=c("Educational","Entertainment","Game","Lifestyle",'Productivity','SocialMedia'),ylim=c(0,0.3),main="Category")
+par(mfrow=c(1,1))
+```
+
+
+```{r}
+db$Category<-as.factor(db$Category)
+db$Minimum.Android<-as.factor(db$Minimum.Android)
+db$Content.Rating<-as.factor(db$Content.Rating)
+db$Ad.Supported<-as.factor(db$Ad.Supported)
+db$In.App.Purchases<-as.factor(db$In.App.Purchases)
+
+dbout$Category<-as.factor(dbout$Category)
+```
+
+```{r}
+numericalVariablesIndexout <- which(sapply(dbout,is.numeric))
+dbout<-dbout[,numericalVariablesIndexout]
+summary(dbout)
+
+numericalVariablesIndex <- which(sapply(db,is.numeric))
+db<-db[,numericalVariablesIndex]
+summary(db)
+```
+
+Correlaciones
+```{r}
+Correlationsout <- cor(dbout); Correlationsout
+Correlations <- cor(db); Correlations
+
+corrplot::corrplot(Correlationsout) 
+corrplot::corrplot(Correlationsout, method = "number",number.cex = 0.75)
+
+corrplot::corrplot(Correlations) 
+corrplot::corrplot(Correlations, method = "number",number.cex = 0.75)
+```
+
+```{r}
+################### EXTRACTION of PCs#####################################
+
+library("FactoMineR")
+library("factoextra")
+res.pca <- PCA(db, scale.unit = TRUE,graph = FALSE)
+
+res.pca1out <- PCA(dbout, scale.unit = TRUE,graph = FALSE)
+```
+
+Comparación PCA
+```{r}
+print(res.pca1out)
+
+eig.val <- get_eigenvalue(res.pca1out)
+eig.val
+
+fviz_eig(res.pca1out, addlabels = TRUE, ylim = c(0, 50))
+
+var1 <- get_pca_var(res.pca1out)
+var1
+
+var <- get_pca_var(res.pca)
+# Contributions to the principal components
+var1$contrib
+
+# Coordinates of variables
+var1$coord
+
+
+fviz_pca_var(res.pca1out, col.var = "red")
+
+var$cos2
+library("corrplot")
+corrplot(var$cos2[,1:5], is.corr=FALSE)
+
+# Total cos2 of variables on Dim.1 and Dim.2
+fviz_cos2(res.pca1out, choice = "var", axes = 1:2)
+fviz_cos2(res.pca1out, choice = "var", axes = c(1,3))
+fviz_cos2(res.pca1out, choice = "var", axes = 2:3)
+
+fviz_cos2(res.pca, choice = "var", axes = 1:2)
+fviz_cos2(res.pca, choice = "var", axes = c(1,3))
+fviz_cos2(res.pca, choice = "var", axes = 2:3)
+
+# Color by cos2 values: quality on the factor map
+fviz_pca_var(res.pca1out, col.var = "cos2",
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"), 
+             repel = TRUE # Avoid text overlapping
+             )
+fviz_pca_var(res.pca, col.var = "cos2",
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"), 
+             repel = TRUE # Avoid text overlapping
+             )
+
+# Color by cos2 values: quality on the factor map
+fviz_pca_var(res.pca1out, col.var = "cos2",axes = c(1,3),
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"), 
+             repel = TRUE # Avoid text overlapping
+             )
+fviz_pca_var(res.pca, col.var = "cos2",axes = c(1,3),
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"), 
+             repel = TRUE # Avoid text overlapping
+             )
+# Color by cos2 values: quality on the factor map
+fviz_pca_var(res.pca1out, col.var = "cos2",axes = c(2,3),
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"), 
+             repel = TRUE # Avoid text overlapping
+             )
+fviz_pca_var(res.pca, col.var = "cos2",axes = c(2,3),
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"), 
+             repel = TRUE # Avoid text overlapping
+             )
+
+corrplot(var1$cos2[, 1:3], is.corr=FALSE)
+
+corrplot(var$cos2[, 1:3], is.corr=FALSE)
+
+# Contributions of variables to PC1
+fviz_contrib(res.pca1out, choice = "var", axes = 1, top = 10)
+fviz_contrib(res.pca, choice = "var", axes = 1, top = 10)
+# Contributions of variables to PC2
+fviz_contrib(res.pca1out, choice = "var", axes = 2, top = 10)
+fviz_contrib(res.pca, choice = "var", axes = 2, top = 10)
+# Contributions of variables to PC3
+fviz_contrib(res.pca1out, choice = "var", axes = 3, top = 10)
+fviz_contrib(res.pca, choice = "var", axes = 3, top = 10)
+```
+
+Ind
+```{r}
+
+fviz_pca_ind(res.pca1out, col.ind = "cos2", axes = c(1,2),
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+             select.ind = list(cos2 = 250),
+             repel = TRUE # Avoid text overlapping (slow if many points)
+             )
+
+fviz_pca_ind(res.pca1out, col.ind = "cos2", axes = c(1,3),
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+             select.ind = list(cos2 = 250),
+             repel = TRUE # Avoid text overlapping (slow if many points)
+             )
+
+fviz_pca_ind(res.pca1out, col.ind = "contrib",axes = c(2,3),
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07","#0073C2FF", "#868686FF"),
+             select.ind = list(cos2 = 250),
+             repel = TRUE # Avoid text overlapping (slow if many points)
+             )
+```
+

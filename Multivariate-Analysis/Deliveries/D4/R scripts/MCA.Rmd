@@ -1,0 +1,304 @@
+---
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r}
+#setwd("D:/Estudi/Universitat/Master/Q1/MVA/lab/DataSets")
+dd <- read.table("Playstore-preprocessed.csv",header=T, sep=",");
+```
+
+```{r}
+library("FactoMineR")
+library("factoextra")
+library("corrplot")
+
+library(tidyverse)
+```
+
+```{r}
+data(dd)
+str(dd)
+summary(dd)
+
+
+dd$Category <- as.factor(dd$Category)
+dd$Minimum.Android <- as.factor(dd$Minimum.Android)
+dd$Content.Rating <- as.factor(dd$Content.Rating)
+dd$Ad.Supported <- as.factor(dd$Ad.Supported)
+dd$In.App.Purchases <- as.factor(dd$In.App.Purchases)
+
+summary(dd)
+
+```
+
+```{r}
+
+dd.active <- dd %>% select(Category, Minimum.Android,Content.Rating,Ad.Supported,In.App.Purchases)
+
+par(mfrow=c(2,3))
+for (i in 1:ncol(dd.active)) {
+  plot(dd.active[,i], main=colnames(dd.active)[i],
+       ylab = "Count", col="steelblue", las = 2)
+}
+par(mfrow=c(1,1))
+
+levels(dd.active$Minimum.Android)
+levMinimumAndroid<- as.factor(c("<4","<4","<4","4","5",">5",">5",">5"))
+levels(dd.active$Minimum.Android) <- levMinimumAndroid
+
+levels(dd.active$Content.Rating)
+levContentRating<- as.factor(c("Everyone","AgeRestricted","AgeRestricted","AgeRestricted","AgeRestricted"))
+levels(dd.active$Content.Rating) <- levContentRating
+
+par(mfrow=c(2,3))
+for (i in 1:ncol(dd.active)) {
+  plot(dd.active[,i], main=colnames(dd.active)[i],
+       ylab = "Count", col="steelblue", las = 2)
+}
+par(mfrow=c(1,1))
+```
+
+```{r}
+res.mca <- MCA(dd.active, graph = TRUE)
+print(res.mca)
+
+eig.val <- get_eigenvalue(res.mca)
+eig.val
+fviz_screeplot(res.mca, addlabels = TRUE, ylim = c(0, 45))
+
+####STEP 2 --- Checking Individuals & Features in 2 dimensions
+
+#dd.reduced <- sample(1:nrow(dd.active), 1000)
+nSamples <- 1000
+coord_sample <- res.mca$ind$coord[sample(1:nrow(res.mca$ind$coord), nSamples), ] 
+contrib_sample <- res.mca$ind$contrib[sample(1:nrow(res.mca$ind$contrib), nSamples), ] 
+cos2_sample <- res.mca$ind$cos2[sample(1:nrow(res.mca$ind$cos2), nSamples), ] 
+
+mca_sample <- res.mca
+#mca_sample$n.obs <- nSamples   #error
+mca_sample$ind$coord <- coord_sample
+mca_sample$ind$contrib <- contrib_sample
+mca_sample$ind$cos2 <- cos2_sample
+
+#fviz_mca_biplot(mca_sample,repel = TRUE, gtheme = theme_minimal())
+
+#varNum <- 1:ncol(dd.active)
+#for(i in varNum){
+  #for(j in varNum){
+    #if (i<j) {
+      #k <- k + 1
+      #fviz_mca_biplot(mca_sample,repel = TRUE, gtheme = theme_minimal(), axes = c(i, j))
+    #}
+  #}
+#}
+
+fviz_mca_biplot(mca_sample,repel = TRUE, gtheme = theme_minimal(), axes = c(1, 2))
+fviz_mca_biplot(mca_sample,repel = TRUE, gtheme = theme_minimal(), axes = c(1, 3))
+fviz_mca_biplot(mca_sample,repel = TRUE, gtheme = theme_minimal(), axes = c(1, 4))
+fviz_mca_biplot(mca_sample,repel = TRUE, gtheme = theme_minimal(), axes = c(1, 5))
+
+fviz_mca_biplot(mca_sample,repel = TRUE, gtheme = theme_minimal(), axes = c(2, 3))
+fviz_mca_biplot(mca_sample,repel = TRUE, gtheme = theme_minimal(), axes = c(2, 4))
+fviz_mca_biplot(mca_sample,repel = TRUE, gtheme = theme_minimal(), axes = c(2, 5))
+
+fviz_mca_biplot(mca_sample,repel = TRUE, gtheme = theme_minimal(), axes = c(3, 4))
+fviz_mca_biplot(mca_sample,repel = TRUE, gtheme = theme_minimal(), axes = c(3, 5))
+
+fviz_mca_biplot(mca_sample,repel = TRUE, gtheme = theme_minimal(), axes = c(4, 5))
+
+```
+
+```{r}
+####STEP 3 ---Graph of variables - Results
+var <- get_mca_var(mca_sample)
+var
+
+head(var$cos2)
+### Correlation between variables and principal dimensions
+### To visualize the correlation between variables and MCA principal dimensions, use this:
+
+
+library(Factoshiny)
+data(dd)
+
+result <- Factoshiny(dd.active)
+
+Factoshiny(result)
+#No change
+fviz_mca_var(res.mca, choice = "mca.cor",repel = TRUE,ggtheme = theme_minimal())
+
+### Coordinates of categories
+fviz_mca_var(res.mca, repel = TRUE, ggtheme = theme_minimal(),axes = c(1, 2))
+fviz_mca_var(res.mca, repel = TRUE, ggtheme = theme_minimal(),axes = c(1, 3))
+fviz_mca_var(res.mca, repel = TRUE, ggtheme = theme_minimal(),axes = c(1, 4))
+fviz_mca_var(res.mca, repel = TRUE, ggtheme = theme_minimal(),axes = c(1, 5))
+
+fviz_mca_var(res.mca, repel = TRUE, ggtheme = theme_minimal(),axes = c(2, 3))
+fviz_mca_var(res.mca, repel = TRUE, ggtheme = theme_minimal(),axes = c(2, 4))
+fviz_mca_var(res.mca, repel = TRUE, ggtheme = theme_minimal(),axes = c(2, 5))
+
+fviz_mca_var(res.mca, repel = TRUE, ggtheme = theme_minimal(),axes = c(3, 4))
+fviz_mca_var(res.mca, repel = TRUE, ggtheme = theme_minimal(),axes = c(3, 5))
+
+fviz_mca_var(res.mca, repel = TRUE, ggtheme = theme_minimal(),axes = c(4, 5))
+
+### Quality of representation of variable categories
+### Please, note that The two dimensions 1 and 2 are sufficient to retain 46%
+### of the total inertia (variation) contained in the data. Not all the points are equally well displayed
+### in the two dimensions.
+
+fviz_mca_var(res.mca, col.var = "contrib", gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),repel = TRUE, ggtheme = theme_minimal(),axes = c(1, 2))
+fviz_mca_var(res.mca, col.var = "contrib", gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),repel = TRUE, ggtheme = theme_minimal(),axes = c(1, 3))
+fviz_mca_var(res.mca, col.var = "contrib", gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),repel = TRUE, ggtheme = theme_minimal(),axes = c(1, 4))
+fviz_mca_var(res.mca, col.var = "contrib", gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),repel = TRUE, ggtheme = theme_minimal(),axes = c(1, 5))
+
+fviz_mca_var(res.mca, col.var = "contrib", gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),repel = TRUE, ggtheme = theme_minimal(),axes = c(2, 3))
+fviz_mca_var(res.mca, col.var = "contrib", gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),repel = TRUE, ggtheme = theme_minimal(),axes = c(2, 4))
+fviz_mca_var(res.mca, col.var = "contrib", gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),repel = TRUE, ggtheme = theme_minimal(),axes = c(2, 5))
+
+fviz_mca_var(res.mca, col.var = "contrib", gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),repel = TRUE, ggtheme = theme_minimal(),axes = c(3, 4))
+fviz_mca_var(res.mca, col.var = "contrib", gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),repel = TRUE, ggtheme = theme_minimal(),axes = c(3, 5))
+
+fviz_mca_var(res.mca, col.var = "contrib", gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),repel = TRUE, ggtheme = theme_minimal(),axes = c(4, 5))
+
+corrplot(var$contrib, is.corr=FALSE)
+fviz_cos2(res.mca, choice = "var", axes = 1:2)
+
+###Note that, variable categories Fish_n, Fish_y, Icecream_n and Icecream_y are not very well represented by the first two dimensions.
+### This implies that the position of the corresponding points on the
+###scatter plot should be interpreted with some caution. A higher dimensional solution is probably necessary. 
+
+###Contribution of variable categories to the dimensions
+##### The variable categories with the larger value, contribute the most to the definition of the dimensions. Variable categories that contribute the most to Dim.1
+##### and Dim.2 are the most important in explaining the variability in the data set.  
+
+fviz_contrib(res.mca, choice = "var", axes = 1, top = 10)
+fviz_contrib(res.mca, choice = "var", axes = 2, top = 10)
+fviz_contrib(res.mca, choice = "var", axes = 3, top = 10)
+fviz_contrib(res.mca, choice = "var", axes = 4, top = 10)
+fviz_contrib(res.mca, choice = "var", axes = 5, top = 10)
+
+# Total contribution to dimension 1 and 2
+fviz_contrib(res.mca, choice = "var", axes = 1:2, top = 15)
+fviz_mca_var(res.mca, col.var = "contrib",gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),repel = TRUE,ggtheme = theme_minimal(),axes = c(1, 2))
+```
+
+
+```{r}
+
+
+####STEP 4 ---Graph of Individuals --Results
+ind <- get_mca_ind(mca_sample)
+ind
+
+### Plots: quality and contribution
+fviz_mca_ind(mca_sample, col.ind = "cos2",gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),repel = TRUE,ggtheme = theme_minimal())
+fviz_mca_ind(mca_sample, col.ind = "contrib",gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),repel = TRUE,ggtheme = theme_minimal())
+fviz_contrib(mca_sample, choice = "ind", axes = 1:2, top = 20)
+
+###Color individuals by groups
+########## it’s possible to color the individuals using any of the qualitative variables in the initial data table (poison),
+########## here, feature--> Category, Minimum.Android,Content.Rating,Ad.Supported,In.App.Purchases
+
+
+fviz_mca_ind(mca_sample, label = "none", habillage = "Category", palette = c("#57B0E4", "#E7B800","#44B61A","#BB00BB",'#DC143C','#FF8C00'),addEllipses = TRUE, ellipse.type = "confidence", ggtheme = theme_minimal(), axes = c(1,2))
+fviz_mca_ind(mca_sample, label = "none", habillage = "Category", palette = c("#57B0E4", "#E7B800","#44B61A","#BB00BB",'#DC143C','#FF8C00'),addEllipses = TRUE, ellipse.type = "confidence", ggtheme = theme_minimal(), axes = c(1,3))
+fviz_mca_ind(mca_sample, label = "none", habillage = "Category", palette = c("#57B0E4", "#E7B800","#44B61A","#BB00BB",'#DC143C','#FF8C00'),addEllipses = TRUE, ellipse.type = "confidence", ggtheme = theme_minimal(), axes = c(1,4))
+fviz_mca_ind(mca_sample, label = "none", habillage = "Category", palette = c("#57B0E4", "#E7B800","#44B61A","#BB00BB",'#DC143C','#FF8C00'),addEllipses = TRUE, ellipse.type = "confidence", ggtheme = theme_minimal(), axes = c(1,5))
+
+fviz_mca_ind(mca_sample, label = "none", habillage = "Category", palette = c("#57B0E4", "#E7B800","#44B61A","#BB00BB",'#DC143C','#FF8C00'),addEllipses = TRUE, ellipse.type = "confidence", ggtheme = theme_minimal(), axes = c(2,3))
+fviz_mca_ind(mca_sample, label = "none", habillage = "Category", palette = c("#57B0E4", "#E7B800","#44B61A","#BB00BB",'#DC143C','#FF8C00'),addEllipses = TRUE, ellipse.type = "confidence", ggtheme = theme_minimal(), axes = c(2,4))
+fviz_mca_ind(mca_sample, label = "none", habillage = "Category", palette = c("#57B0E4", "#E7B800","#44B61A","#BB00BB",'#DC143C','#FF8C00'),addEllipses = TRUE, ellipse.type = "confidence", ggtheme = theme_minimal(), axes = c(2,5))
+
+fviz_mca_ind(mca_sample, label = "none", habillage = "Category", palette = c("#57B0E4", "#E7B800","#44B61A","#BB00BB",'#DC143C','#FF8C00'),addEllipses = TRUE, ellipse.type = "confidence", ggtheme = theme_minimal(), axes = c(3,4))
+fviz_mca_ind(mca_sample, label = "none", habillage = "Category", palette = c("#57B0E4", "#E7B800","#44B61A","#BB00BB",'#DC143C','#FF8C00'),addEllipses = TRUE, ellipse.type = "confidence", ggtheme = theme_minimal(), axes = c(3,5))
+
+fviz_mca_ind(mca_sample, label = "none", habillage = "Category", palette = c("#57B0E4", "#E7B800","#44B61A","#BB00BB",'#DC143C','#FF8C00'),addEllipses = TRUE, ellipse.type = "confidence", ggtheme = theme_minimal(), axes = c(4,5))
+
+### Minimum.Android
+
+fviz_mca_ind(mca_sample, label = "none", habillage = "Minimum.Android", palette = c("#57B0E4", "#E7B800","#44B61A","#BB00BB"),addEllipses = TRUE, ellipse.type = "confidence", ggtheme = theme_minimal(), axes = c(1,2))
+fviz_mca_ind(mca_sample, label = "none", habillage = "Minimum.Android", palette = c("#57B0E4", "#E7B800","#44B61A","#BB00BB"),addEllipses = TRUE, ellipse.type = "confidence", ggtheme = theme_minimal(), axes = c(1,3))
+fviz_mca_ind(mca_sample, label = "none", habillage = "Minimum.Android", palette = c("#57B0E4", "#E7B800","#44B61A","#BB00BB"),addEllipses = TRUE, ellipse.type = "confidence", ggtheme = theme_minimal(), axes = c(1,4))
+fviz_mca_ind(mca_sample, label = "none", habillage = "Minimum.Android", palette = c("#57B0E4", "#E7B800","#44B61A","#BB00BB"),addEllipses = TRUE, ellipse.type = "confidence", ggtheme = theme_minimal(), axes = c(1,5))
+
+fviz_mca_ind(mca_sample, label = "none", habillage = "Minimum.Android", palette = c("#57B0E4", "#E7B800","#44B61A","#BB00BB"),addEllipses = TRUE, ellipse.type = "confidence", ggtheme = theme_minimal(), axes = c(2,3))
+fviz_mca_ind(mca_sample, label = "none", habillage = "Minimum.Android", palette = c("#57B0E4", "#E7B800","#44B61A","#BB00BB"),addEllipses = TRUE, ellipse.type = "confidence", ggtheme = theme_minimal(), axes = c(2,4))
+fviz_mca_ind(mca_sample, label = "none", habillage = "Minimum.Android", palette = c("#57B0E4", "#E7B800","#44B61A","#BB00BB"),addEllipses = TRUE, ellipse.type = "confidence", ggtheme = theme_minimal(), axes = c(2,5))
+
+fviz_mca_ind(mca_sample, label = "none", habillage = "Minimum.Android", palette = c("#57B0E4", "#E7B800","#44B61A","#BB00BB"),addEllipses = TRUE, ellipse.type = "confidence", ggtheme = theme_minimal(), axes = c(3,4))
+fviz_mca_ind(mca_sample, label = "none", habillage = "Minimum.Android", palette = c("#57B0E4", "#E7B800","#44B61A","#BB00BB"),addEllipses = TRUE, ellipse.type = "confidence", ggtheme = theme_minimal(), axes = c(3,5))
+
+fviz_mca_ind(mca_sample, label = "none", habillage = "Minimum.Android", palette = c("#57B0E4", "#E7B800","#44B61A","#BB00BB"),addEllipses = TRUE, ellipse.type = "confidence", ggtheme = theme_minimal(), axes = c(4,5))
+
+### Content.Rating
+
+fviz_mca_ind(mca_sample, label = "none", habillage = "Content.Rating", palette = c("#00AFBB", "#E7B800"),addEllipses = TRUE, ellipse.type = "confidence", ggtheme = theme_minimal(), axes = c(1,2))
+fviz_mca_ind(mca_sample, label = "none", habillage = "Content.Rating", palette = c("#00AFBB", "#E7B800"),addEllipses = TRUE, ellipse.type = "confidence", ggtheme = theme_minimal(), axes = c(1,3))
+fviz_mca_ind(mca_sample, label = "none", habillage = "Content.Rating", palette = c("#00AFBB", "#E7B800"),addEllipses = TRUE, ellipse.type = "confidence", ggtheme = theme_minimal(), axes = c(1,4))
+fviz_mca_ind(mca_sample, label = "none", habillage = "Content.Rating", palette = c("#00AFBB", "#E7B800"),addEllipses = TRUE, ellipse.type = "confidence", ggtheme = theme_minimal(), axes = c(1,5))
+
+fviz_mca_ind(mca_sample, label = "none", habillage = "Content.Rating", palette = c("#00AFBB", "#E7B800"),addEllipses = TRUE, ellipse.type = "confidence", ggtheme = theme_minimal(), axes = c(2,3))
+fviz_mca_ind(mca_sample, label = "none", habillage = "Content.Rating", palette = c("#00AFBB", "#E7B800"),addEllipses = TRUE, ellipse.type = "confidence", ggtheme = theme_minimal(), axes = c(2,4))
+fviz_mca_ind(mca_sample, label = "none", habillage = "Content.Rating", palette = c("#00AFBB", "#E7B800"),addEllipses = TRUE, ellipse.type = "confidence", ggtheme = theme_minimal(), axes = c(2,5))
+
+fviz_mca_ind(mca_sample, label = "none", habillage = "Content.Rating", palette = c("#00AFBB", "#E7B800"),addEllipses = TRUE, ellipse.type = "confidence", ggtheme = theme_minimal(), axes = c(3,4))
+fviz_mca_ind(mca_sample, label = "none", habillage = "Content.Rating", palette = c("#00AFBB", "#E7B800"),addEllipses = TRUE, ellipse.type = "confidence", ggtheme = theme_minimal(), axes = c(3,5))
+
+fviz_mca_ind(mca_sample, label = "none", habillage = "Content.Rating", palette = c("#00AFBB", "#E7B800"),addEllipses = TRUE, ellipse.type = "confidence", ggtheme = theme_minimal(), axes = c(4,5))
+
+### Ad.Supported
+
+fviz_mca_ind(mca_sample, label = "none", habillage = "Ad.Supported", palette = c("#00AFBB", "#E7B800"),addEllipses = TRUE, ellipse.type = "confidence", ggtheme = theme_minimal(), axes = c(1,2))
+fviz_mca_ind(mca_sample, label = "none", habillage = "Ad.Supported", palette = c("#00AFBB", "#E7B800"),addEllipses = TRUE, ellipse.type = "confidence", ggtheme = theme_minimal(), axes = c(1,3))
+fviz_mca_ind(mca_sample, label = "none", habillage = "Ad.Supported", palette = c("#00AFBB", "#E7B800"),addEllipses = TRUE, ellipse.type = "confidence", ggtheme = theme_minimal(), axes = c(1,4))
+fviz_mca_ind(mca_sample, label = "none", habillage = "Ad.Supported", palette = c("#00AFBB", "#E7B800"),addEllipses = TRUE, ellipse.type = "confidence", ggtheme = theme_minimal(), axes = c(1,5))
+
+fviz_mca_ind(mca_sample, label = "none", habillage = "Ad.Supported", palette = c("#00AFBB", "#E7B800"),addEllipses = TRUE, ellipse.type = "confidence", ggtheme = theme_minimal(), axes = c(2,3))
+fviz_mca_ind(mca_sample, label = "none", habillage = "Ad.Supported", palette = c("#00AFBB", "#E7B800"),addEllipses = TRUE, ellipse.type = "confidence", ggtheme = theme_minimal(), axes = c(2,4))
+fviz_mca_ind(mca_sample, label = "none", habillage = "Ad.Supported", palette = c("#00AFBB", "#E7B800"),addEllipses = TRUE, ellipse.type = "confidence", ggtheme = theme_minimal(), axes = c(2,5))
+
+fviz_mca_ind(mca_sample, label = "none", habillage = "Ad.Supported", palette = c("#00AFBB", "#E7B800"),addEllipses = TRUE, ellipse.type = "confidence", ggtheme = theme_minimal(), axes = c(3,4))
+fviz_mca_ind(mca_sample, label = "none", habillage = "Ad.Supported", palette = c("#00AFBB", "#E7B800"),addEllipses = TRUE, ellipse.type = "confidence", ggtheme = theme_minimal(), axes = c(3,5))
+
+fviz_mca_ind(mca_sample, label = "none", habillage = "Ad.Supported", palette = c("#00AFBB", "#E7B800"),addEllipses = TRUE, ellipse.type = "confidence", ggtheme = theme_minimal(), axes = c(4,5))
+
+### In.App.Purchases
+
+fviz_mca_ind(mca_sample, label = "none", habillage = "In.App.Purchases", palette = c("#00AFBB", "#E7B800"),addEllipses = TRUE, ellipse.type = "confidence", ggtheme = theme_minimal(), axes = c(1,2))
+fviz_mca_ind(mca_sample, label = "none", habillage = "In.App.Purchases", palette = c("#00AFBB", "#E7B800"),addEllipses = TRUE, ellipse.type = "confidence", ggtheme = theme_minimal(), axes = c(1,3))
+fviz_mca_ind(mca_sample, label = "none", habillage = "In.App.Purchases", palette = c("#00AFBB", "#E7B800"),addEllipses = TRUE, ellipse.type = "confidence", ggtheme = theme_minimal(), axes = c(1,4))
+fviz_mca_ind(mca_sample, label = "none", habillage = "In.App.Purchases", palette = c("#00AFBB", "#E7B800"),addEllipses = TRUE, ellipse.type = "confidence", ggtheme = theme_minimal(), axes = c(1,5))
+
+fviz_mca_ind(mca_sample, label = "none", habillage = "In.App.Purchases", palette = c("#00AFBB", "#E7B800"),addEllipses = TRUE, ellipse.type = "confidence", ggtheme = theme_minimal(), axes = c(2,3))
+fviz_mca_ind(mca_sample, label = "none", habillage = "In.App.Purchases", palette = c("#00AFBB", "#E7B800"),addEllipses = TRUE, ellipse.type = "confidence", ggtheme = theme_minimal(), axes = c(2,4))
+fviz_mca_ind(mca_sample, label = "none", habillage = "In.App.Purchases", palette = c("#00AFBB", "#E7B800"),addEllipses = TRUE, ellipse.type = "confidence", ggtheme = theme_minimal(), axes = c(2,5))
+
+fviz_mca_ind(mca_sample, label = "none", habillage = "In.App.Purchases", palette = c("#00AFBB", "#E7B800"),addEllipses = TRUE, ellipse.type = "confidence", ggtheme = theme_minimal(), axes = c(3,4))
+fviz_mca_ind(mca_sample, label = "none", habillage = "In.App.Purchases", palette = c("#00AFBB", "#E7B800"),addEllipses = TRUE, ellipse.type = "confidence", ggtheme = theme_minimal(), axes = c(3,5))
+
+fviz_mca_ind(mca_sample, label = "none", habillage = "In.App.Purchases", palette = c("#00AFBB", "#E7B800"),addEllipses = TRUE, ellipse.type = "confidence", ggtheme = theme_minimal(), axes = c(4,5))
+
+### Multiple Graphs
+
+#fviz_ellipses(mca_sample, c("Ad.Supported", "In.App.Purchases"), geom = "point")
+fviz_ellipses(mca_sample, 1:5, geom = "point", axes = c(1,2))   #do all combinations of dimensions
+
+#### STEP 5 --> Dimension description
+res.desc <- dimdesc(res.mca, axes = 1:5)
+res.desc
+# Description of dimension 1
+res.desc[[1]]
+# Description of dimension 2
+res.desc[[2]]
+# Description of dimension 3
+res.desc[[3]]
+# Description of dimension 4
+res.desc[[4]]
+# Description of dimension 5
+res.desc[[5]]
+
+```
+

@@ -1,0 +1,365 @@
+---
+title: "lda2"
+output: html_document
+date: '2022-12-16'
+---
+
+```{r}
+library(MASS)
+library(car)
+library(stringr)
+library(caret)
+library(pROC)
+library(dplyr)
+
+options(repos = c(
+    fawda123 = 'https://fawda123.r-universe.dev',
+    CRAN = 'https://cloud.r-project.org'))
+install.packages('ggord')
+library(ggord)
+```
+
+
+```{r}
+dd <- read.csv("Playstore-tree.csv", sep=",",dec=".")
+summary(dd)
+```
+
+# Transform numeric target to categorical in order to do Discriminant analysis
+
+```{r}
+dd$f.rating <- "1-5"
+l <- which(dd$Rating >=1 & dd$Rating<3)
+dd$f.rating[l] <- "low (1-3)"
+l <- which(dd$Rating >= 3)
+dd$f.rating[l] <- "high (3-5)"
+dd$f.rating <- as.factor(dd$f.rating)
+table(dd$f.rating)
+```
+
+```{r}
+dd$Installs<-log(dd$Installs+1)
+dd$Size<-log(dd$Size+1)
+dd$DaysLastUpdate<-log(dd$DaysLastUpdate+1)
+dd$AppNameLen<-log(dd$AppNameLen+1)
+
+
+dd$Category<-as.factor(dd$Category)
+#dd$Minimum.Android<-as.factor(dd$Minimum.Android)
+dd$Content.Rating<-as.factor(dd$Content.Rating)
+# dd$Ad.Supported<-as.factor(dd$Ad.Supported)
+# dd$In.App.Purchases<-as.factor(dd$In.App.Purchases)
+# dd$f.rating<-as.factor(dd$f.rating)
+
+ll<-which(dd$Ad.Supported=="True")
+dd$Ad.Supported[ll]<-1
+dd$Ad.Supported[-ll]<-0
+
+ll<-which(dd$In.App.Purchases=="True")
+dd$In.App.Purchases[ll]<-1
+dd$In.App.Purchases[-ll]<-0
+
+numericalVariablesIndex <- which(sapply(dd,is.numeric))
+```
+
+```{r}
+
+l <- which(dd$Rating >=3)
+copy<-dd[sample(l,10000),]
+dd<-dd[-l,]
+
+dd <- rbind(dd,copy)
+table(dd$f.rating)
+```
+
+
+
+```{r}
+# Splitting data to training and test sets.
+set.seed(123)
+numberRows <- nrow(dd)
+learn <- sample(1:numberRows, round(0.7*numberRows))
+
+training_all <- dd[learn,]
+test_all = dd[-learn,]
+
+training <- training_all %>%
+  dplyr::select(Size, DaysLastUpdate,Minimum.Android,AppNameLen,Ad.Supported, Installs, f.rating)
+test <- test_all %>%
+  dplyr::select(Size, DaysLastUpdate,Minimum.Android,AppNameLen, Ad.Supported,Installs, f.rating)
+```
+
+
+```{r}
+# Defining Functions
+calcWithinGroupsVariance <- function(variable,groupvariable)
+{
+  # find out how many values the group variable can take
+  groupvariable2 <- as.factor(groupvariable[[1]])
+  levels <- levels(groupvariable2)
+  numlevels <- length(levels)
+  # get the mean and standard deviation for each group:
+  numtotal <- 0
+  denomtotal <- 0
+  for (i in 1:numlevels)
+  {
+    leveli <- levels[i]
+    levelidata <- variable[groupvariable==leveli,]
+    levelilength <- length(levelidata)
+    # get the standard deviation for group i:
+    sdi <- sd(levelidata)
+    numi <- (levelilength - 1)*(sdi * sdi)
+    denomi <- levelilength
+    numtotal <- numtotal + numi
+    denomtotal <- denomtotal + denomi
+  }
+  # calculate the within-groups variance
+  Vw <- numtotal / (denomtotal - numlevels)
+  return(Vw)
+}
+
+groupStandardise <- function(variables, groupvariable)
+{
+  # find out how many variables we have
+  variables <- as.data.frame(variables)
+  numvariables <- length(variables)
+  # find the variable names
+  variablenames <- colnames(variables)
+  # calculate the group-standardised version of each variable
+  for (i in 1:numvariables)
+  {
+    variablei <- variables[i]
+    variablei_name <- variablenames[i]
+    variablei_Vw <- calcWithinGroupsVariance(variablei, groupvariable)
+    variablei_mean <- mean(as.matrix(variablei))  
+    variablei_new <- (variablei - variablei_mean)/(sqrt(variablei_Vw))
+    data_length <- nrow(variablei)
+    if (i == 1) { variables_new <- data.frame(row.names=seq(1,data_length)) }
+    variables_new[`variablei_name`] <- variablei_new
+  }
+  return(variables_new)
+}
+
+calcBetweenGroupsVariance <- function(variable,groupvariable)
+{
+  # find out how many values the group variable can take
+  groupvariable2 <- as.factor(groupvariable[[1]])
+  levels <- levels(groupvariable2)
+  numlevels <- length(levels)
+  # calculate the overall grand mean:
+  grandmean <- mean(as.matrix(variable) )         
+  # get the mean and standard deviation for each group:
+  numtotal <- 0
+  denomtotal <- 0
+  for (i in 1:numlevels)
+  {
+    leveli <- levels[i]
+    levelidata <- variable[groupvariable==leveli,]
+    levelilength <- length(levelidata)
+    # get the mean and standard deviation for group i:
+    meani <- mean( as.matrix(levelidata) )
+    sdi <- sd(levelidata)
+    numi <- levelilength * ((meani - grandmean)^2)
+    denomi <- levelilength
+    numtotal <- numtotal + numi
+    denomtotal <- denomtotal + denomi
+  }
+  # calculate the between-groups variance
+  Vb <- numtotal / (numlevels - 1)
+  Vb <- Vb[[1]]
+  return(Vb)
+}
+
+calcSeparations <- function(variables,groupvariable)
+{
+  # find out how many variables we have
+  variables <- as.data.frame(variables)
+  numvariables <- length(variables)
+  # find the variable names
+  variablenames <- colnames(variables)
+  # calculate the separation for each variable
+  for (i in 1:numvariables)
+  {
+    variablei <- variables[i]
+    variablename <- variablenames[i]
+    Vw <- calcWithinGroupsVariance(variablei, groupvariable)
+    Vb <- calcBetweenGroupsVariance(variablei, groupvariable)
+    sep <- Vb/Vw
+    print(paste("variable",variablename,"Vw=",Vw,"Vb=",Vb,"separation=",sep))
+  }
+}
+
+calcAllocationRuleAccuracy <- function(ldavalue, groupvariable, cutoffpoints)
+{
+  # find out how many values the group variable can take
+  groupvariable2 <- as.factor(groupvariable[[1]])
+  levels <- levels(groupvariable2)
+  numlevels <- length(levels)
+  # calculate the number of true positives and false negatives for each group
+  numlevels <- length(levels)
+  for (i in 1:numlevels)
+  {
+    leveli <- levels[i]
+    levelidata <- ldavalue[groupvariable==leveli]
+    # see how many of the samples from this group are classified in each group
+    for (j in 1:numlevels)
+    {
+      levelj <- levels[j]
+      if (j == 1)
+      {
+        cutoff1 <- cutoffpoints[1]
+        cutoff2 <- "NA"
+        results <- summary(levelidata <= cutoff1)
+      }
+      else if (j == numlevels)
+      {
+        cutoff1 <- cutoffpoints[(numlevels-1)]
+        cutoff2 <- "NA"
+        results <- summary(levelidata > cutoff1)
+      }
+      else
+      {
+        cutoff1 <- cutoffpoints[(j-1)]
+        cutoff2 <- cutoffpoints[(j)]
+        results <- summary(levelidata > cutoff1 & levelidata <= cutoff2)
+      }
+      trues <- results["TRUE"]
+      trues <- trues[[1]]
+      print(paste("Number of samples of group",leveli,"classified as group",levelj," : ",
+                  trues,"(cutoffs:",cutoff1,",",cutoff2,")"))
+    }
+  }
+}
+
+printMeanAndSdByGroup <- function(variables,groupvariable)
+{
+  # find the names of the variables
+  variablenames <- c(names(groupvariable),names(as.data.frame(variables)))
+  # within each group, find the mean of each variable
+  groupvariable <- groupvariable[,1] # ensures groupvariable is not a list
+  means <- aggregate(as.matrix(variables) ~ groupvariable, FUN = mean)
+  names(means) <- variablenames
+  print(paste("Means:"))
+  print(means)
+  # within each group, find the standard deviation of each variable:
+  sds <- aggregate(as.matrix(variables) ~ groupvariable, FUN = sd)
+  names(sds) <- variablenames
+  print(paste("Standard deviations:"))
+  print(sds)
+  # within each group, find the number of samples:
+  samplesizes <- aggregate(as.matrix(variables) ~ groupvariable, FUN = length)
+  names(samplesizes) <- variablenames
+  print(paste("Sample sizes:"))
+  print(samplesizes)
+}
+```
+
+
+
+```{r}
+
+#if features are normalized, then results are more understandable
+training_standardise <- groupStandardise(training[,c(1:6)], training[7])
+training_standardise$f.rating <- training$f.rating
+
+test_standardise <- groupStandardise(test[,c(1:6)], test[7])
+test_standardise$f.rating <- test$f.rating
+
+summary(training_standardise)
+summary(test_standardise)
+
+training.lda <- lda(f.rating ~., data = training_standardise)
+
+training.lda
+
+
+# Coefficients of the Discriminant Functions
+training.lda$scaling[,1]
+
+# Values of each case for the first discriminant function
+training.lda.values <- predict(training.lda, training_standardise[,c(1:6)])
+
+LDA1<- training.lda.values$x[,1]
+# LDA2<- training.lda.values$x[,2]
+
+# Separation given by the discriminant functions.
+calcSeparations(training.lda.values$x,training_standardise$f.rating)
+
+
+# Stacked Histograms of the LDA Values
+ldahist(data = LDA1, g=training_standardise$f.rating)
+
+
+# ldahist(data = LDA2, g=training_standardise$f.rating)
+
+plot(LDA1, main="LDA1 Projection of Training Data",
+     xlab="LDA1")
+
+training_posterior <- training.lda.values$posterior
+training_pred <- training.lda.values$class 
+
+head(training_posterior)
+
+
+# Confusion matrix
+training_conf <- table(predicted=training_pred, observed=training_standardise$f.rating)
+training_conf
+
+# Training Accuracy
+training_accuracy<-sum(diag(training_conf))/dim(training_standardise)[1]
+training_accuracy
+
+# Training Missclassification Rate
+training_mr <- 1-training_accuracy
+training_mr
+
+# ggord(training.lda, training_standardise$f.rating)
+
+
+
+ggplotLDAPrep <- function(x){
+  if (!is.null(Terms <- x$terms)) {
+    data <- model.frame(x)
+    X <- model.matrix(delete.response(Terms), data)
+    g <- model.response(data)
+    xint <- match("(Intercept)", colnames(X), nomatch = 0L)
+    if (xint > 0L) 
+      X <- X[, -xint, drop = FALSE]
+  }
+  means <- colMeans(x$means)
+  X <- scale(X, center = means, scale = FALSE) %*% x$scaling
+  rtrn <- as.data.frame(cbind(X,labels=as.character(g)))
+  rtrn <- data.frame(X,labels=as.character(g))
+  return(rtrn)
+}
+
+fitGraph <- ggplotLDAPrep(training.lda)
+ggplot(fitGraph, aes(LD1))+geom_histogram()+facet_wrap(~labels, ncol=1)
+ggplot(fitGraph, aes(LD1,fill=labels))+geom_histogram()
+```
+
+```{r}
+# TESTING
+
+test.lda.values <- predict(training.lda, test_standardise[1:6])
+test_predictions <- test.lda.values$class
+
+test_posterior <- test.lda.values$posterior
+
+# Confusion matrix
+test_conf <- table(predicted=test_predictions, observed=test_standardise$f.rating)
+test_conf
+
+# Accuracy
+test_accuracy<-sum(diag(test_conf))/dim(test_standardise)[1]
+test_accuracy
+
+# Missclassification Rate
+test_mr <- 1-test_accuracy
+test_mr
+
+```
+
+
+
+

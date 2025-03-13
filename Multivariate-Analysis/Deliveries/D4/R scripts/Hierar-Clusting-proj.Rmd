@@ -1,0 +1,155 @@
+---
+title: "Hierc-Clustering"
+output: html_document
+date: "2022-11-14"
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r}
+library(cluster)
+library(dplyr)
+library(reshape2)
+library(tidyr)
+library(ggplot2)
+library(stats)
+library(cluster)
+library(mclust)
+library(factoextra)
+library(dendextend)
+library(NbClust)
+library(colorspace)
+library(patchwork)
+library(ggplot2)
+library(ggthemes)
+library(FactoMineR)
+```
+
+#set a list of numerical variables
+
+```{r}
+dd <- read.csv("Playstore-preprocessed.csv", sep=",",dec=".",stringsAsFactors=TRUE)
+dd$Minimum.Android <- as.factor(dd$Minimum.Android)
+summary(dd)
+
+#set a list of numerical variables
+num_col <- unlist(lapply(dd,is.numeric))
+cat_col <- !num_col
+summary(dd)
+```
+
+```{r}
+hist(dd$Rating)
+hist(log(dd$Rating.Count))
+hist(dd$Size)
+hist(log(dd$DaysLastUpdate))
+hist(log(dd$ReleasedDays))
+hist(dd$AppNameLen)
+hist(dd$Installs)
+
+dd$Rating.Count <- log(dd$Rating.Count)
+dd$DaysLastUpdate <- log(dd$DaysLastUpdate+0.01)
+dd$ReleasedDays <- log(dd$ReleasedDays+0.01)
+
+dd[,num_col] <- scale(dd[,num_col])
+summary(dd)
+```
+
+```{r}
+summary(dd)
+actives <- c(1,3:12)
+actives_num <- c(3,4,9:12)
+
+dissimMatrix <- daisy(dd[,actives], metric = "gower", stand=TRUE)
+distMatrix<-dissimMatrix^2
+
+fit <- hclust(distMatrix,method="ward.D")
+
+plot(fit, main="H.Clustering with gower^2 distance and method WARD")
+rect.hclust(fit, k=3, border=6)
+```
+
+# Selection of K with quality clustering KPIs by using NbClust
+
+```{r}
+summary(dd)
+
+indices <- c("kl","ch","hartigan","cindex","db","silhouette","ball","dunn","sdindex")
+
+particiones <- vector()
+for(i in 1:length(indices)){
+  print(indices[i])
+  sel_k<-NbClust(dd[,actives_num],diss=distMatrix,distance=NULL,min.nc=2,max.nc=6,method="ward.D",index=indices[i])
+  particiones[i]<-max(sel_k$Best.partition)
+}
+
+names(particiones) <- indices
+particiones       #k=3 for 4/9, k=2 for 3/9, k=6 for 2/9
+
+k <- 3
+cut_k <- cutree(fit,k)
+
+sil = silhouette (cut_k,distMatrix) 
+windows() 
+plot(sil)
+```
+
+# clustering with weights
+
+```{r}
+round(cor(dd[,num_col]), 2)
+
+ddw <- dd
+ddw$Rating.Count <- dd$Rating.Count * 5
+ddw$Size <- dd$Size   * 5
+ddw$DaysLastUpdate <- dd$DaysLastUpdate * 20
+ddw$ReleasedDays  <- dd$ReleasedDays  * 20
+ddw$AppNameLen <- dd$AppNameLen * 10
+ddw$Installs  <- dd$Installs  * 40
+```
+
+```{r}
+dissimMatrixW <- daisy(ddw[,actives], metric = "gower", stand=TRUE)
+distMatrixW<-dissimMatrixW^2
+
+fitW <- hclust(distMatrixW,method="ward.D")
+
+plot(fitW, main="H.Clustering with gower^2 distance and method WARD using weights")
+rect.hclust(fitW, k=4, border=6)
+```
+
+# Selection of K with quality clustering KPIs by using NbClust
+
+```{r}
+summary(ddw)
+
+indices <- c("kl","ch","hartigan","cindex","db","silhouette","ball","dunn","sdindex")
+
+particiones <- vector()
+for(i in 1:length(indices)){
+  print(indices[i])
+  sel_k<-NbClust(ddw[,actives_num],diss=distMatrixW,distance=NULL,min.nc=2,max.nc=6,method="ward.D",index=indices[i])
+  particiones[i]<-max(sel_k$Best.partition)
+}
+
+names(particiones) <- indices
+particiones       #k=2 for 4/9, k=3 for 3/9, k=6 for 2/9
+
+k <- 3
+cut_kw <- cutree(fitW,k)
+
+silw = silhouette (cut_kw,distMatrixW) 
+windows() 
+plot(silw)
+```
+
+#save clusters
+
+```{r}
+dd2 <- read.csv("Playstore-preprocessed.csv", sep=",",dec=".",stringsAsFactors=TRUE)
+dd2 <- cbind(dd2,Clusters=cut_k)
+#dd2 <- cbind(dd2,Weighted.Clusters=cut_kw)
+summary(dd2)
+write.csv(dd2, file.path(getwd(), "Playstore-Clustered.csv"), row.names = FALSE)
+```
+
