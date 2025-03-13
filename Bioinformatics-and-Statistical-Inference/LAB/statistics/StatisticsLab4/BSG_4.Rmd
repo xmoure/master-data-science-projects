@@ -1,0 +1,190 @@
+---
+output:
+  word_document: default
+  html_document: default
+editor_options:
+  chunk_output_type: console
+---
+
+
+```{r}
+dff <- read.table("Chr21.dat",header = T)
+df <- dff[,-c(1:6)]
+```
+
+
+#1
+```{r}
+variants <- ncol(df)
+total <- nrow(df) * variants
+missing <- sum(is.na(df))
+
+percentage_missing <- missing/total
+cat("Number of variants:", variants, "\n")
+cat("Percentage of missing data: ", percentage_missing*100, "%\n")
+```
+
+#2
+```{r}
+dist_mat <- dist(df, method = "minkowski", p = 1)
+dist_mat <- as.matrix(dist_mat)
+sub_mat <- dist_mat[1:5,1:5];sub_mat
+
+cat("Matrix with distance first five individuals:%\n")
+sub_mat
+```
+
+#3
+The allele-sharing distance is the sum of the absolute value of the difference in numbers of alleles over all loci. In multivariate analysis this metric is better known as the Manhattan distance
+
+#4
+```{r}
+dis_scaled <- cmdscale(dist_mat, k = 2, eig = T)
+
+dis_scaled2 <- as.data.frame(dis_scaled$points)
+names(dis_scaled2) <- c("D1", "D2")
+
+
+plot(dis_scaled2$D1, dis_scaled2$D2, xlab = "D1", ylab = "D2", main = "MDS Manhattan Distance", pch = 19, col = "blue")
+
+pop <- length(which(dis_scaled2$D1 > 0))
+
+cat("Population 1: ", pop, "\n")
+cat("Population 2: ", 203-pop, "\n")
+```
+
+Two subpopulations
+
+
+#5
+```{r}
+which(dis_scaled$eig<0)
+
+cat("Goodness of fit: ", dis_scaled$GOF, "\n")
+```
+
+Discrepancy between observed values and expected values, closer to 1 the better.
+
+#6
+```{r}
+estimated_dist_mat <- as.matrix(dist(dis_scaled$points))
+
+
+observed_distances <- as.vector(as.matrix(dist_mat))
+estimated_distances <- as.vector(estimated_dist_mat)
+
+
+plot(observed_distances, estimated_distances, xlab = "Observed Distances", ylab = "Estimated Distances", main = "Observed vs Estimated Distances", xlim=c(0,1000000))
+abline(0, 1, col = "red", lty = 1)
+
+fit <- lm(estimated_distances ~ observed_distances)
+summary_fit <- summary(fit)
+summary(fit)
+
+r_squared <- summary_fit$r.squared
+print(paste("Coefficient of Determination (R-squared):", r_squared))
+```
+
+
+#7
+```{r}
+library(MASS)
+
+n <- nrow(dist_mat)
+m <- 2
+
+set.seed(12345)
+
+init <- scale(matrix(runif(m * n), ncol = m), scale = FALSE)
+
+nmmds <- isoMDS(dist_mat, k = m, y = init)
+
+plot(nmmds$points, xlab = "D1", ylab = "D2", main = "Non-metric MDS", pch = 19, col = "blue")
+```
+
+It seems the results come from an homogeneous population.
+
+#8
+```{r}
+
+nmmds_m <- list()
+
+loop <- 5
+par(mfrow = c(2,3))
+stress_r <- numeric(loop)
+
+
+for (i in 1:loop) {
+  init <- scale(matrix(runif(m * n), ncol = m), scale = FALSE)
+  nmmds_m[[i]] <- isoMDS(dist_mat, k = m, y = init)
+  plot(nmmds_m[[i]]$points, main = paste("Run", i), xlab = "D1", ylab = "D2", pch = 19, col = "blue")
+  stress_r[i] <- nmmds_m[[i]]$stress
+}
+
+
+cat("Stress values: ", stress_r, "\n")
+
+```
+
+Stress is above 10 for all values, means it is not a good representation, some plots show 2 populations others only 1.
+
+#9
+```{r}
+nmmds_m2 <- list()
+
+loop_d <- 50
+stress_r2 <- numeric(loop_d)
+
+for (i in 1:loop_d) {
+  m <- i
+  init <- scale(matrix(runif(m * n), ncol = m), scale = FALSE)
+  nmmds_m2[[i]] <- isoMDS(dist_mat, k = m, y = init)
+  stress_r2[i] <- nmmds_m2[[i]]$stress
+}
+
+par(mfrow = c(1,1))
+
+dim <- c(1:50)
+
+plot(x = dim, y = stress_r2, main = "Stress vs dim", xlab = "Run", ylab = "Stress", pch = 19, col = "blue")
+ll <- which(stress_r2 < 10)
+
+cat("Stress values: ", stress_r2, "\n")
+cat("Dimension where stress starts being below 10: ", ll[1], "\n")
+```
+
+
+
+#10
+```{r}
+nmmds_m3 <- list()
+
+loop3 <- 100
+m <- 2
+stress_r3 <- numeric(loop3)
+
+for (i in 1:loop3) {
+  init <- scale(matrix(runif(m * n), ncol = m), scale = FALSE)
+  nmmds_m3[[i]] <- isoMDS(dist_mat, k = m, y = init)
+  stress_r3[i] <- nmmds_m3[[i]]$stress
+}
+
+par(mfrow = c(1,2))
+
+llmin <- which.min(stress_r3)
+llmax <- which.max(stress_r3)
+
+plot(nmmds_m3[[llmin]]$points, main = "Best run", xlab = "D1", ylab = "D2", pch = 19, col = "blue")
+plot(nmmds_m3[[llmax]]$points, main = "Worse run", xlab = "D1", ylab = "D2", pch = 19, col = "blue")
+```
+
+
+#11
+```{r}
+cor_matrix <- cor(dis_scaled2, nmmds_m3[[llmin]]$points)
+
+cat("Correlation matrix: \n")
+print(cor_matrix)
+```
+
+First dimension captures of metric correlated to first and second dimension of non_metric dimensions.

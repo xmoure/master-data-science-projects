@@ -1,0 +1,186 @@
+---
+output:
+  word_document: default
+  html_document: default
+editor_options:
+  chunk_output_type: console
+---
+
+#SNP dataset
+```{r}
+library(data.table)
+library(HardyWeinberg)
+dff <- fread("TSIChr22v4.raw",header = T)
+df <- dff[,-c(1:6)]
+df <- as.data.frame(df)
+```
+
+
+#1
+```{r}
+variants <- ncol(df)
+total <- nrow(df) * variants
+missing <- sum(is.na(df))
+
+percentage_missing <- missing/total
+cat("Number of variants:", variants, "\n")
+cat("Percentage of missing data: ", percentage_missing*100, "%\n")
+```
+
+
+#2
+```{r}
+u <- 1
+mono <- numeric()
+for (i in 1: variants)
+{
+  a <- length(unique(na.omit(df[,i])))
+  if (a==1){
+  mono[u] <-  i
+  u <- u+1
+  }
+}
+
+percentage_mono <- length(mono)/variants;
+var_aft <- df[,-mono]
+
+cat("Percentage of monomorphic variants:", percentage_mono*100, "%\n")
+cat("Number of remaining variants:", ncol(var_aft), "\n")
+```
+
+
+#3
+```{r}
+rs587756191_T <- var_aft[,"rs587756191_T"]
+unique_values <- unique(rs587756191_T)
+
+rs587756191_T <- factor(rs587756191_T, levels = c("0", "1", "2"), labels = c("AA", "AB", "BB"))
+
+tab <- table(rs587756191_T); #Genotype count
+
+gen <- sum(tab)
+
+chi <- HWChisq(tab, cc = 0)
+
+chi_c <- HWChisq(tab, cc = 0.5)
+
+exact <- HWExact(tab)
+
+perm <- HWPerm(tab, nperm = 100)
+
+cat("Genotype Counts for rs587756191_T:\n")
+tab
+cat("Chi_Square test without continuity:")
+print(chi)
+cat("Chi_Square test with continuity:")
+print(chi_c)
+cat("Exact test:")
+print(exact)
+cat("Permutation test:")
+print(perm)
+```
+
+
+#4
+```{r}
+gen_count <- function(genotype_column) {
+  
+  genotype_column <- factor(genotype_column, levels = c("0", "1", "2"), labels = c("AA", "AB", "BB"))
+  # Count the occurrences of each genotype
+  genotype_counts <- table(genotype_column)
+  
+  return(genotype_counts)
+}
+
+# Create datarame
+rows <- numeric(ncol(var_aft))
+genotypes <- data.frame(AA = rows, AB = rows, BB = rows) 
+
+# Calculate gen_count for each variant (column) in var_aft
+for (i in seq_along(rows)) {
+  genotypes[i,] <- as.numeric(gen_count(var_aft[, i]))
+}
+```
+
+
+#5
+```{r}
+# Apply HWExactStats test to each row of genotypes
+hw_results <- HWExactStats(genotypes,x.linked = FALSE)
+
+significant <- sum(hw_results < 0.05)
+percentage_significant <- significant/nrow(genotypes)
+
+cat("Percentage of significant SNPs:",percentage_significant*100 , "%\n")
+hw_results$
+```
+Below 5%, so in equilibrium.
+
+#6
+```{r}
+values <- unlist(hw_results)
+
+ll <- which(hw_results == min(values))
+column_names <- colnames(var_aft)[ll]
+value <- genotypes[ll,]
+
+cat("Genotype Counts for",column_names,":\n")
+value
+```
+
+No AB and more or less same AA and BB, so no equilibrium.
+
+#7
+```{r}
+
+for (i in c(1:nrow(genotypes))) {
+  x <- genotypes[i,]
+  x_numeric <- as.numeric(unlist(x))
+  fhat[i] <- HWf(x_numeric)
+}
+
+mean_f <- mean(fhat)
+sd_f <- sd(fhat)
+median_f <- median(fhat)
+min_f <- min(fhat)
+max_f <- max(fhat)
+
+cat("Mean of Inbreeding coefficients:", mean_f, "\n")
+cat("Standard Deviation of Inbreeding coefficients:", sd_f, "\n")
+cat("Median of Inbreeding coefficients:", median_f, "\n")
+cat("Minimum of Inbreeding coefficients:", min_f, "\n")
+cat("Maximum of Inbreeding coefficients:", max_f, "\n")
+
+
+hist(fhat, main = "Inbreeding coefficients", xlab = "f", ylab = "Frequency")
+
+qqnorm(fhat, main = "Q-Q Plot of Data", xlab = "Theoretical Quantiles", ylab = "Sample Quantiles")
+
+qqline(fhat, col = "red", lwd = 2)
+
+```
+
+#8
+```{r}
+
+significant0.1 <- sum(hw_results < 0.1)
+percentage_significant0.1 <- significant0.1/nrow(genotypes)
+
+
+significant0.05 <- sum(hw_results < 0.05)
+percentage_significant0.05 <- significant0.05/nrow(genotypes)
+
+significant0.01 <- sum(hw_results < 0.01)
+percentage_significant0.01 <- significant0.01/nrow(genotypes)
+
+significant0.001 <- sum(hw_results < 0.001)
+percentage_significant0.001 <- significant0.001/nrow(genotypes)
+
+
+cat("Percentage of significant SNPs at significant level of 0.1:",percentage_significant0.1*100 , "%\n")
+cat("Percentage of significant SNPs at significant level of 0.05:",percentage_significant0.05*100 , "%\n")
+cat("Percentage of significant SNPs at significant level of 0.01:",percentage_significant0.01*100 , "%\n")
+cat("Percentage of significant SNPs at significant level of 0.001:",percentage_significant0.001*100 , "%\n")
+```
+
+

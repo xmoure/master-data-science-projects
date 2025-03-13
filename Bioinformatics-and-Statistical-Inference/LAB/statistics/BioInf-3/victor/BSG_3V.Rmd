@@ -1,0 +1,282 @@
+---
+output:
+  word_document: default
+  html_document: default
+editor_options:
+  chunk_output_type: console
+---
+
+##Linkage Disequilibrium
+
+```{r}
+library(genetics)
+library(data.table)
+library(HardyWeinberg)
+dff <- read.table("FOXP2/FOXP2.dat",header = T)
+df <- dff[,-1]
+```
+
+
+#1
+```{r}
+individuals <- nrow(df)
+total <- individuals * ncol(df)
+missing <- sum(is.na(df))
+
+percentage_missing <- missing/total
+cat("Number of individuals:", individuals, "\n")
+cat("Number of SNPs:", ncol(df), "\n")
+cat("Percentage of missing data: ", percentage_missing*100, "%\n")
+```
+
+#2
+```{r}
+rs34684677 <- genotype(df[,"rs34684677"])
+rs2894715 <- genotype(df[,"rs2894715"])
+
+wa <- LD(rs34684677,rs2894715)
+wa$`R^2`
+```
+
+We obtain a D' close to one and the null hypothesis is rejected, so there is a significant association.
+
+#3
+```{r}
+D <- wa$D
+r1 <- table(rs34684677);r1
+r2 <- table(rs2894715);r2
+
+pA <- (r1[1]+0.5*r1[2])/(sum(r1)+sum(r2)) #GA
+pa <- (r1[3]+0.5*r1[2])/(sum(r1)+sum(r2)) #Ta
+pB <- (r2[1]+0.5*r2[2])/(sum(r1)+sum(r2)) #GB
+pb <- (r2[3]+0.5*r2[2])/(sum(r1)+sum(r2)) #Tb
+
+pAB <- pA*pB+D;pAB #GA/GB
+pAb <- pA*pb-D;pAb #GA/Tb
+paB <- pa*pB-D;paB #Ta/GB
+pab <- pa*pb+D;pab #Ta/Tb
+
+cat("Most common haplotype: G/G\n")
+```
+
+#4
+```{r}
+bim_data <- read.table("FOXP2.bim", header = FALSE)
+colnames(bim_data) <- c("chromosome", "SNP", "genetic_dist", "position", "allele1", "allele2")
+
+selected_snps <- bim_data[c(1:nrow(bim_data)), ]
+allele_pairs <- paste(selected_snps$allele1, selected_snps$allele2, sep = "/")
+
+df_mod <- df
+
+df_mod[] <- lapply(df_mod, function(x) gsub("/", "", x))
+
+Y <-MakeCounts(df_mod, allele_pairs)
+Y[,c(1,3)] <- Y[,c(3,1)]
+
+
+chi_pvalues <- numeric(nrow(Y))
+
+for (i in c(1:nrow(Y))) {
+  chi <- HWChisq(Y[i,c(1:3)], cc = 0)
+  chi_pvalues[i] <- chi$pval
+}
+
+sign <- sum(chi_pvalues<0.05)
+percentage0.05 <- sign/nrow(Y)
+cat("Percentage of significant variants 0.05:", percentage0.05*100, "%\n")
+```
+No, maximum i assume a 5% of desequilibrium by chance
+
+
+#5
+```{r}
+snps <- colnames(df)
+
+# Initialize a matrix to store R^2 values
+r2_matrix <- matrix(NA, ncol = length(snps), nrow = length(snps), dimnames = list(snps, snps))
+
+
+for (i in 1:(length(snps) - 1)) {
+    for (j in (i + 1):length(snps)) {
+        snp1 <- genotype(df[, snps[i]])
+        snp2 <- genotype(df[, snps[j]])
+        
+        ld_result <- LD(snp1, snp2)
+        
+        r2_matrix[i, j] <- ld_result$`R^2`
+    }
+}
+
+# Create LD heatmap
+image(r2_matrix, main = "LD Heatmap (R^2 values)", xlab = "SNP Index", ylab = "SNP Index", col = heat.colors(256))
+
+```
+
+The theoretical range is from 0 to 1, with 1 being having an equal distribution of A and B.
+
+#6
+```{r}
+calculate_MAF <- function(genotype_column) {
+  
+  p_a <- (genotype_column[1] + 0.5 * genotype_column[2]) / sum(genotype_column)
+  p_b <- (genotype_column[3] + 0.5 * genotype_column[2]) / sum(genotype_column)
+  
+
+  MAF <- min(p_a, p_b)
+  
+  return(MAF)
+}
+
+# Initialize a vector to store MAF for each variant
+MAF_values <- numeric(nrow(Y))
+
+# Calculate MAF for each variant (column) in var_aft
+for (i in seq_along(MAF_values)) {
+  MAF_values[i] <- calculate_MAF(Y[i, c(1:3)])
+}
+
+
+ll <- which(MAF_values < 0.35)
+df_M <- df[,-ll]
+
+snps <- colnames(df_M)
+
+# Initialize a matrix to store R^2 values
+r2_matrix_M <- matrix(NA, ncol = length(snps), nrow = length(snps), dimnames = list(snps, snps))
+
+
+for (i in 1:(length(snps) - 1)) {
+    for (j in (i + 1):length(snps)) {
+        snp1 <- genotype(df_M[, snps[i]])
+        snp2 <- genotype(df_M[, snps[j]])
+        
+        ld_result <- LD(snp1, snp2)
+        
+        r2_matrix_M[i, j] <- ld_result$`R^2`
+    }
+}
+
+# Create LD heatmap
+image(r2_matrix_M, main = "LD Heatmap (R^2 values)", xlab = "SNP Index", ylab = "SNP Index", col = heat.colors(256))
+
+
+```
+
+
+#7
+```{r}
+# Assuming bim_data is your dataframe from the .bim file
+positions <- bim_data$position
+snps <- bim_data$SNP
+
+# Initialize a matrix to store distances
+distance_matrix <- matrix(0, ncol = length(positions), nrow = length(positions), dimnames = list(snps, snps))
+
+# Compute distances
+for (i in 1:(length(positions) - 1)) {
+    for (j in (i + 1):length(positions)) {
+        distance_matrix[i, j] <- abs(positions[i] - positions[j])
+        distance_matrix[j, i] <- distance_matrix[i, j]  # Symmetric matrix
+    }
+}
+
+
+distances <- as.vector(distance_matrix)
+
+r2_values <- as.vector(r2_matrix)
+
+
+plot(distances, r2_values, xlab = "Distance (base pairs)", ylab = "R^2 (LD)", main = "R^2 vs. Distance", pch = 20)
+
+
+```
+
+
+##Haplotype estimation
+
+#1
+```{r}
+df2 <- read.table("APOE.dat",header = T)
+bim2_data <- read.table("APOE.bim", header = FALSE)
+colnames(bim2_data) <- c("chromosome", "SNP", "genetic_dist", "position", "allele1", "allele2")
+df2 <- df2[,-1]
+
+individuals <- nrow(df2)
+total <- individuals * ncol(df2)
+missing <- sum(is.na(df2))
+
+percentage_missing <- missing/total
+cat("Number of individuals:", individuals, "\n")
+cat("Number of SNPs:", ncol(df2), "\n")
+cat("Percentage of missing data: ", percentage_missing*100, "%\n")
+```
+
+#2
+```{r}
+n_haplotypes <- 2^ncol(df2)
+cat("Number of theoretical haplotypes:", n_haplotypes, "\n")
+```
+
+#3
+
+```{r}
+library(haplo.stats)
+
+geno <- data.frame(row.names = row.names(df2))
+
+for(i in 1:ncol(df2)){
+  geno <- cbind(geno,substr(df2[,i],1,1),substr(df2[,i],3,3))
+}
+geno <- as.matrix(geno)
+snpnames <- colnames(df2)
+
+# Estimate haplotype frequencies using haplo.em
+HaploEM <- haplo.em(geno, locus.label = snpnames)
+prob <- sort(HaploEM$hap.prob, decreasing = T)
+
+
+cat("Number haplotypes type:", length(prob), "\n")
+
+cat("Probabilities in descending order:", prob, "\n")
+ 
+cat("Most common haplotype number:", which.max(HaploEM$hap.prob), "\n")
+```
+
+#4
+```{r}
+selected_snps2 <- bim2_data[c(1:nrow(bim2_data)), ]
+allele_pairs2 <- paste(selected_snps2$allele1, selected_snps2$allele2, sep = "/")
+
+df_mod2 <- df2
+
+df_mod2[] <- lapply(df_mod2, function(x) gsub("/", "", x))
+
+Y2 <-MakeCounts(df_mod2, allele_pairs2)
+Y2[,c(1,3)] <- Y2[,c(3,1)]
+
+pb <- numeric(nrow(Y2))
+for(i in 1:nrow(Y2)) {
+  pb[i] <- (Y2[i,3] + 0.5 * Y2[i,2]) / sum(Y2[i,])
+}
+
+ll2 <- which(pb<0.1); ll2
+
+df_less <- df2[,-ll2]
+
+geno <- data.frame(row.names = row.names(df_less))
+
+for(i in 1:ncol(df_less)){
+  geno <- cbind(geno,substr(df_less[,i],1,1),substr(df_less[,i],3,3))
+}
+geno <- as.matrix(geno)
+snpnames <- colnames(df_less)
+
+# Estimate haplotype frequencies using haplo.em
+HaploEM <- haplo.em(geno, locus.label = snpnames)
+prob <- sort(HaploEM$hap.prob, decreasing = T)
+
+
+cat("Number haplotypes type:", length(prob), "\n")
+```
+

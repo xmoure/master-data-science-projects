@@ -1,0 +1,337 @@
+---
+title: "BSG-MDS practical 4 Statistical Genetics"
+author: "Eliya Tiram and Ximena Moure"
+date: "28/11/2023, submission deadline 05/12/2023"
+output:
+  pdf_document:
+    latex_engine: xelatex
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r load packages, echo=FALSE, message=FALSE, warning=FALSE}
+#install.packages("haplo.stats")
+library(dplyr)
+library(genetics)
+library(MASS)
+library(data.table)
+
+```
+
+## Load data
+```{r}
+data <- fread("Chr21.dat")
+genetic_data <- data[, -c(1:6), with=FALSE]
+```
+
+## 1. How many variants are there in this database? What percentage of the data is missing?
+```{r}
+num_variants <- ncol(genetic_data)
+missing_data_percentage <- 100 * sum(is.na(genetic_data)) / (nrow(genetic_data) * ncol(genetic_data))
+
+cat("\nNum variants:",num_variants, "\n")
+cat("\nPercentage missing:",missing_data_percentage, "\n")
+
+```
+
+## 2. Compute the Manhattan distance matrix between the individuals (which is identical to the Minkowsky distance with parameter λ = 1) using R function dist. Include a submatrix of dimension 5 by 5 with the distances between the first 5 individuals in your report.
+
+```{r}
+manhattan_distances <- as.matrix(dist(genetic_data, method = "manhattan"))
+# Extract a 5x5 submatrix for the first five individuals
+submatrix_5x5 <- manhattan_distances[1:5, 1:5]
+
+submatrix_5x5
+```
+
+## 3. How does the Manhattan distance relate to the allele sharing distance?
+
+Manhattan distance calculates the number of different alleles between two 
+polymorphisms, and the allele sharing distance does the same from the encoded 
+version (0,1,2) by extracting the difference.
+
+```{r}
+
+
+```
+
+
+## 4. Apply metric multidimensional scaling (cmdscale) with two dimensions, k = 2, using the Manhattan distance matrix and include the map in your report. Do you think the data come from one homogeneous human population? If not, how many subpopulations do you think the data might come from, and how many individuals pertain to each suppopulation?
+
+In the plot, we see two distinct clusters of points. This suggests that the 
+individuals in this dataset likely come from at least two different 
+subpopulations. 
+The clusters are quite distinct and do not overlap, indicating that the genetic
+variation between the groups is substantial.
+
+```{r}
+mds <- cmdscale(manhattan_distances, k = 2, eig = T)
+mds_scaled <- as.data.frame(mds$points)
+# Plot the map
+plot(mds_scaled$V1,mds_scaled$V2, main = "MDS Plot", xlab = "Dimension 1", ylab = "Dimension 2")
+
+```
+
+```{r}
+threshold <- 0
+num_subpop1 <- sum(mds$points[,1] < threshold)
+num_subpop2 <- sum(mds$points[,1] >= threshold)
+num_subpop1
+num_subpop2
+
+```
+
+We could also use kmeans to calculate the number of individuals in each 
+subpopulation.
+
+```{r}
+set.seed(42)
+kmeans_result <- kmeans(mds$points, centers = 2)
+
+# Count the number of individuals in each cluster
+table(kmeans_result$cluster)
+
+plot(mds$points[, 1], mds$points[, 2], col = kmeans_result$cluster,
+     xlab = "Dimension 1", ylab = "Dimension 2", main = "MDS Plot with K-Means Clustering")
+legend("topright", legend = c("Subpopulation 1", "Subpopulation 2"), 
+       col = 1:2, pch = 1)
+
+
+```
+## 5. What is the goodness-of-fit of the two-dimensional approximation to your distance matrix? Explain which criterium you have used.
+
+The goodness-of-fit measure (GOF) that we obtain from the mds$GOF is based on 
+the proportion of variance accounted for by the chosen number of dimensions.
+
+First Value (0.1703581): This represents the variance accounted for by the first
+dimension alone. It suggests that the first dimension captures about 17.03% of 
+the total variance.
+Second Value (0.1703605): This represents the cumulative variance accounted for 
+by both the first and second dimensions. Since the increase from the first to 
+the second value is very small, it implies that the second dimension adds very 
+little additional information beyond what is captured by the first dimension.
+
+A cumulative goodness-of-fit of 17.04% is relatively low. This means that the 
+two-dimensional solution does not capture a large portion of the variance in 
+the original high-dimensional distance data.
+
+```{r}
+gof <-mds$GOF
+cat("\nGOF:",gof, "\n")
+```
+
+
+## 6. Make a plot of the estimated distances (according to your two-dimensional map of individuals) versus the observed distances. What do you observe? Regress estimated distances on observed distances and report the coefficient of determination of the regression (you can use the function lm).
+
+```{r}
+mds_distances <- as.matrix(dist(mds$points))
+
+# Plot the estimated MDS distances against the observed Manhattan distances
+plot( mds_distances, manhattan_distances, main = "Estimated vs. Observed Distances",
+     xlab = "Estimated Distances (MDS)", ylab = "Observed Distances (Manhattan)")
+
+# Perform a linear regression of observed distances on estimated MDS distances
+regression <- lm(manhattan_distances ~ mds_distances)
+
+# Extract the R-squared value from the regression summary
+r_squared <- summary(regression)$r.squared
+
+cat("\nCoefficient of Determination (R-squared):", r_squared, "\n")
+```
+```{r}
+
+mds_distances <- as.matrix(dist(mds$points))
+
+
+observed_distances <- as.vector(as.matrix(manhattan_distances))
+estimated_distances <- as.vector(mds_distances)
+
+
+plot(observed_distances, estimated_distances, xlab = "Observed Distances", ylab = "Estimated Distances", main = "Observed vs Estimated Distances")
+abline(0, 1, col = "red", lty = 1)
+
+fit <- lm(estimated_distances ~ observed_distances)
+summary_fit <- summary(fit)
+summary(fit)
+
+r_squared <- summary_fit$r.squared
+print(paste("Coefficient of Determination (R-squared):", r_squared))
+```
+
+## 7. We now try a (two-dimensional) non-metric multidimensional scaling using the isoMDs function that you will find in MASS library. We use a random initial configuration and, for the sake of reproducibility, make this random initial configuration with the instructions: set.seed(12345) and init <- scale(matrix(runif(m*n),ncol=m),scale=FALSE) where n represents the sample size and m represents the dimensionality of the solution. Make a plot of the two-dimensional solution. Do the results support that the data come from one homogeneous population?
+
+There are no obvious subgroups indicating separate populations, this can suggest 
+that the individuals in the dataset might come from a single homogeneous 
+population.
+
+```{r}
+set.seed(12345)
+n <- nrow(genetic_data)
+m <- 2
+init <- scale(matrix(runif(m * n), ncol = m), scale = FALSE)
+nonmetric_mds <- isoMDS(manhattan_distances, k = 2, y = init)
+# Plot the non-metric MDS map
+plot(nonmetric_mds$points, main = "Non-Metric MDS Plot", xlab = "Dimension 1", ylab = "Dimension 2")
+
+```
+
+## 8. Try some additional runs of the two-dimensional isoMDS with different initial configurations. Make a plot of the solutions and report the STRESS for each of them. What do you observe?
+
+The variation in stress values implies that the initial configuration has a 
+significant impact on the resulting MDS solution. The results suggest that the 
+optimization process in isoMDS might be getting stuck in local minima, leading 
+to suboptimal solutions in some runs.
+
+From the plots we can observe that some of them show 1 population and others 2.
+
+```{r}
+library(MASS)
+library(ggplot2)
+
+times <- 8
+par(mfrow = c(2, 3))
+stress_r <- numeric(times) # To store stress values
+mds_run_results <- list() # To store MDS results for each run
+
+set.seed(123)
+for (i in 1:times) {
+  # Random initial configuration
+  init <- scale(matrix(runif(2 * nrow(manhattan_distances)), ncol = 2), scale = FALSE)
+  mds_run_results[[i]] <- isoMDS(manhattan_distances, k = 2, y = init)$points
+  plot(mds_run_results[[i]], main = paste("Run", i), xlab = "D1", ylab = "D2", pch = 19, col = "red")
+  stress_r[i] <- isoMDS(manhattan_distances, k = 2, y = init)$stress
+}
+
+par(mfrow = c(1, 1))
+```
+
+```{r}
+cat("Stress values: ", stress_r, "\n")
+```
+
+## 9.Compute the stress for a 1, 2, 3, . . . , 50-dimensional solution. How many dimensions are necessary to obtain a good representation with a stress below 10? Make a plot of the stress against the number of dimensions.
+
+```{r}
+
+stress_values <- numeric(50)  # to store stress values for each dimension
+dimensions <- 1:50  # vector containing the number of dimensions
+cmdscale_result <- cmdscale(manhattan_distances, eig = TRUE, k = max(dimensions))
+
+for (k in dimensions) {
+   init <- cmdscale_result$points[, 1:k, drop = FALSE]
+  # Run non-metric MDS with varying dimensions
+  mds_result <- isoMDS(manhattan_distances, k = k, y=init)
+  # Store the stress value
+  stress_values[k] <- mds_result$stress
+}
+
+# Find the number of dimensions needed for stress below 10
+good_dims <- which(stress_values < 10)
+
+if (length(good_dims) > 0) {
+  cat("Minimum dimensions needed for stress below 10:", min(good_dims), "\n")
+} else {
+  cat("No solution with stress below 10 found up to 50 dimensions.\n")
+}
+
+# Plot stress values against number of dimensions
+plot(dimensions, stress_values, type = "b", xlab = "Number of Dimensions", ylab = "Stress Value", main = "Stress vs. Number of Dimensions")
+
+```
+
+## 10. Run the two-dimensional isoMDS a hundred times, each time using a different random initial configuration using the instructions above. Report the stress of the best and the worse run, and plot the corresponding maps. Compare your results to the metric MDS and comment on your findings.
+
+The plot for the best run shows a more defined structure with data points 
+grouped together, indicating that the two-dimensional space may be 
+capturing some meaningful relationships within the data.
+
+The plot for the worst run shows the points dispersed in a circular pattern, 
+which suggests that the two-dimensional representation is more or less random 
+and does not capture the structure of the data effectively.
+
+The substantial difference in stress values and the visual configurations 
+imply that the initial configuration can significantly influence the quality of 
+the isoMDS solution.
+
+
+
+
+```{r}
+
+
+n_runs <- 100
+n <- nrow(manhattan_distances)
+stress_values <- numeric(n_runs)
+mds_configs <- list()
+
+for (i in 1:n_runs) {
+  set.seed(i)
+  init <- scale(matrix(runif(2 * n), ncol = 2), scale = FALSE) # Random initial configuration
+  mds_run <- isoMDS(manhattan_distances, k = 2, y = init)
+  stress_values[i] <- mds_run$stress
+  mds_configs[[i]] <- mds_run$points
+}
+
+# Identify the best and worst runs
+best_run <- which.min(stress_values)
+worst_run <- which.max(stress_values)
+
+cat("Best run stress:", stress_values[best_run], "\n")
+cat("Worst run stress:", stress_values[worst_run], "\n")
+
+# Plot the best and worst MDS configurations
+par(mfrow=c(1, 2)) # Set up plotting area
+
+plot(mds_configs[[best_run]][,1], mds_configs[[best_run]][,2], 
+     main = paste("Best Run (Stress:", round(stress_values[best_run], 4), ")"),
+     xlab = "Dimension 1", ylab = "Dimension 2", pch = 19)
+
+plot(mds_configs[[worst_run]][,1], mds_configs[[worst_run]][,2], 
+     main = paste("Worst Run (Stress:", round(stress_values[worst_run], 4), ")"),
+     xlab = "Dimension 1", ylab = "Dimension 2", pch = 19)
+
+par(mfrow=c(1, 1))
+
+```
+
+
+## 11. Compute the correlation matrix between the first two dimensions of the metric MDS and the two-dimensional solution of your best non-metric MDS. Comment your findings.
+
+The first dimension of metric MDS (Dimension 1) has a very high positive 
+correlation with the first dimension of non-metric MDS. This indicates that 
+both MDS methods are in strong agreement and are capturing a similar pattern of
+variation along their respective first dimensions.
+
+The first dimension of metric MDS also has a high negative correlation with the
+second dimension of non-metric MDS. A negative correlation means that as one 
+dimension increases, the other decreases. 
+
+There is a low negative correlation between the second dimension of metric MDS 
+and both dimensions of non-metric MDS. These low values suggest that the second 
+dimension of the metric MDS does not correspond well to either dimension of the 
+non-metric MDS, indicating dissimilarity in the patterns captured by this 
+particular dimension across the two methods.
+
+The strong correlations (positive and negative) indicate that while there is 
+some agreement between the methods on the primary dimension of variation, there 
+is a significant difference in how the secondary dimensions are represented.
+
+
+
+```{r}
+
+# best non-metric MDS run
+best_nonmetric_mds_points <- mds_configs[[best_run]]
+
+cor_matrix <- cor(mds_scaled, best_nonmetric_mds_points)
+
+print(cor_matrix)
+
+image(1:2, 1:2, as.matrix(cor_matrix), main="Correlation Matrix", xlab="Metric MDS Dimensions", ylab="Non-metric MDS Dimensions", xaxt='n', yaxt='n')
+axis(1, at=1:2, labels=c("Dimension 1", "Dimension 2"))
+axis(2, at=1:2, labels=c("Dimension 1", "Dimension 2"), las=2)  # 'las=2' makes the y-axis labels perpendicular to the axis
+
+```

@@ -1,0 +1,286 @@
+---
+title: "Task1"
+output: html_document
+date: '2023-11-09'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+data <- read.table("TSICHR22RAW.raw", header=TRUE)
+genetic_data <- data[, 7:ncol(data)]
+```
+
+# 1. How many variants are there in this database? What percentage of the data is missing?
+
+There are 20649 variants.
+The percentage of data missing is 0.20.
+```{r}
+# Counting the number of variants
+num_variants <- ncol(genetic_data)
+percentage_missing <- mean(is.na(genetic_data)) * 100
+```
+
+## 2. Calculate the percentage of monomorphic variants. Exclude all monomorphics from the database for all posterior computations of the practical. How many variants do remain in your database?
+
+A monomorphic variant is one where all individuals have the same genotype. In this case, this would mean all values in a column are the same.
+```{r}
+is_monomorphic <- apply(genetic_data, 2, function(x) length(unique(na.omit(x))) == 1)
+percentage_monomorphic <- sum(is_monomorphic) / length(is_monomorphic) * 100
+
+# Removing monomorphic variants
+polymorphic_data <- genetic_data[, !is_monomorphic]
+remaining_variants <- ncol(polymorphic_data)
+
+cat("\nRemaining variants:",remaining_variants, "\n")
+```
+
+
+## 3. Report the genotype counts and the minor allele count of polymorphism rs8138488 C, and calculate the MAF of this variant.
+```{r}
+
+# Extract the genotype data for rs8138488
+rs8138488_genotypes <- na.omit(polymorphic_data$rs8138488_C)
+
+# Calculate the genotype counts for AA, AB, and BB
+genotype_counts <- table(rs8138488_genotypes)
+
+
+aa_count <- genotype_counts["0"]
+ab_count <- genotype_counts["1"]
+bb_count <- genotype_counts["2"]
+
+total_alleles <- 2 * (aa_count + ab_count + bb_count)
+pA <- (2 * aa_count + ab_count) / total_alleles  # frequency of allele A
+pB <- (2 * bb_count + ab_count) / total_alleles  # frequency of allele B
+
+# Calculate MAF
+maf <- min(pA, pB)
+
+# Output the results
+cat("Genotype counts for rs8138488 (AA AB BB):", genotype_counts, "\n")
+cat("Minor allele count for rs8138488:", maf * total_alleles, "\n")
+cat("MAF for rs8138488:", maf, "\n")
+
+
+```
+
+## 4.Compute the minor allele frequencies (MAF) for all markers, and make a histogram of it. Does the MAF follow a uniform distribution? What percentage of the markers have a MAF below 0.05? And below 0.01? Can you explain the observed pattern?
+```{r}
+
+calculate_maf <- function(genotype) {
+  aa_count <- sum(genotype == 0)
+  ab_count <- sum(genotype == 1, na.rm = TRUE)
+  bb_count <- sum(genotype == 2, na.rm = TRUE)
+  
+  # Calculate allele frequencies
+  total_alleles <- 2 * (aa_count + ab_count + bb_count)
+  pA <- (2 * aa_count + ab_count) / total_alleles  # frequency of allele A
+  pB <- (2 * bb_count + ab_count) / total_alleles  # frequency of allele B
+  
+  # Calculate MAF
+  return(min(pA, pB))
+}
+
+
+maf_all <- apply(polymorphic_data, 2, calculate_maf)
+
+hist(maf_all, main = "Histogram of Minor Allele Frequencies (MAF)", 
+     xlab = "MAF", ylab = "Frequency", col = "blue")
+
+
+# Calculate the percentage of markers with MAF below 0.05 and 0.01
+percent_maf_below_005 <- sum(maf_all < 0.05) / length(maf_all) * 100
+percent_maf_below_001 <- sum(maf_all < 0.01) / length(maf_all) * 100
+
+# Output the results
+cat("Percentage of markers with MAF below 0.05:", percent_maf_below_005, "%\n")
+cat("Percentage of markers with MAF below 0.01:", percent_maf_below_001, "%\n")
+
+
+```
+
+## 5. Calculate the observed heterozygosity H0, and make a histogram of it. What is, theo- retically, the range of variation of this statistic?
+```{r}
+
+# Calculate observed heterozygosity (Ho) for each marker, which is the frequency of the AB genotype
+calculate_ho <- function(genotype) {
+  ab_count <- sum(genotype == 1, na.rm = TRUE)  # Count the number of AB genotypes
+  total_genotypes <- sum(!is.na(genotype))       # Count the total number of non-missing genotypes
+  ho <- ab_count / total_genotypes               # Calculate Ho as the proportion of AB genotypes
+  return(ho)
+}
+
+# Apply the function to all markers (columns) in the genetic data
+ho_all <- apply(polymorphic_data, 2, calculate_ho)
+
+hist(ho_all, breaks = 100, main = "Histogram of Observed Heterozygosity (Ho)", 
+     xlab = "Ho", ylab = "Frequency", col = "green")
+
+# The theoretical range of variation for Ho is from 0 to 1, where 0 means no heterozygosity
+# and 1 means complete heterozygosity.
+
+summary_ho <- summary(ho_all)
+print(summary_ho)
+
+
+```
+
+## 6. Compute for each marker its expected heterozygosity (He), where the expected het- erozygosityforabi-allelicmarkerisdefinedas1−Pki=1p2i ,wherep2iisthefrequencyofthe ith allele. Make a histogram of the expected heterozygosity. What is, theoretically, the range of variation of this statistic? What is the average of He for this database?
+
+He is calculated as 1 - sum of the squared allele frequencies.
+
+```{r}
+# Calculate expected heterozygosity (He) for each marker
+calculate_he <- function(genotype) {
+  aa_count <- sum(genotype == 0, na.rm = TRUE)
+  ab_count <- sum(genotype == 1, na.rm = TRUE)
+  bb_count <- sum(genotype == 2, na.rm = TRUE)
+  
+  # Calculate allele frequencies
+  total_alleles <- 2 * (aa_count + ab_count + bb_count)
+  pA <- (2 * aa_count + ab_count) / total_alleles  # frequency of allele A
+  pB <- (2 * bb_count + ab_count) / total_alleles  # frequency of allele B
+  
+  # Calculate expected heterozygosity
+  he <- 1 - (pA^2 + pB^2)
+  return(he)
+}
+
+# Apply the function to all markers (columns) in the genetic data
+he_all <- apply(polymorphic_data, 2, calculate_he)
+
+# Create a histogram of He
+hist(he_all, breaks = 100, main = "Histogram of Expected Heterozygosity (He)", 
+     xlab = "He", ylab = "Frequency", col = "purple")
+
+# The theoretical range of variation for He is from 0 to 0.5 for bi-allelic markers,
+# where 0 means no genetic diversity and 0.5 means maximum diversity.
+
+# Calculate the average He for the dataset
+average_he <- mean(he_all)
+
+# Output the average He
+cat("Average expected heterozygosity (He):", average_he, "\n")
+
+```
+
+
+# STR dataset
+
+```{r}
+install.packages("HardyWeinberg")
+library(HardyWeinberg)
+data("NistSTRs")
+```
+
+## 1. How many individuals and how many STRs contains the database?
+
+```{r}
+num_individuals <- nrow(NistSTRs)
+num_STRs <- ncol(NistSTRs) / 2  # Since each STR is represented by two columns (alleles)
+
+num_individuals
+num_STRs
+
+
+# Print the results
+cat("Number of individuals:", num_individuals, "\n")
+cat("Number of STRs:", num_STRs, "\n")
+```
+
+## 2. Write a function that determines the number of alleles for a STR. Determine the number of alleles for each STR in the database. Compute basic descriptive statistics of the number of alleles (mean, standard deviation, median, minimum, maximum)
+
+We iterate over the STRs, treating each STR as a pair of columns. The number of STRs is half the total number of columns (since each STR is represented by two columns).
+
+For each STR, we extract its corresponding pair of columns across all individuals and count the unique values (alleles)
+
+```{r}
+# Custom function to determine the number of alleles for a given STR
+num_alleles_per_STR <- function(str_index, str_data) {
+  alleles_1 <- str_data[, (2 * str_index - 1)]
+  alleles_2 <- str_data[, (2 * str_index)]
+  
+  # Combine alleles from both columns and sort them
+  all_alleles <- sort(c(alleles_1, alleles_2))
+  
+  # Count the unique alleles
+  num_unique_alleles <- length(unique(all_alleles))
+  
+  return(num_unique_alleles)
+}
+
+# Number of STRs (columns in the dataset, considering two columns per STR)
+num_STRs <- ncol(NistSTRs) / 2
+
+# Determine the number of alleles for each STR in the database
+alleles_per_STR <- sapply(1:num_STRs, function(i) num_alleles_per_STR(i, NistSTRs))
+
+# Descriptive statistics
+mean_alleles <- mean(alleles_per_STR)
+sd_alleles <- sd(alleles_per_STR)
+median_alleles <- median(alleles_per_STR)
+min_alleles <- min(alleles_per_STR)
+max_alleles <- max(alleles_per_STR)
+
+# Return descriptive statistics
+list(mean = mean_alleles, sd = sd_alleles, median = median_alleles, min = min_alleles, max = max_alleles)
+
+
+```
+
+````{r}
+alleles_per_STR
+
+````
+
+
+
+## 3.  Make a table with the number of STRs for a given number of alleles and present a barplot of the number STRs in each category. What is the most common number of alleles for an STR?
+
+```{r}
+allele_counts <- table(alleles_per_STR)
+barplot(allele_counts, main = "Number of STRs per Number of Alleles", xlab = "Number of Alleles", ylab = "Number of STRs")
+
+most_common_alleles <- as.integer(names(allele_counts)[which.max(allele_counts)])
+
+```
+
+## 4. Compute the expected heterozygosity for each STR. Make a histogram of the expected heterozygosity over all STRS. Compute the average expected heterozygosity over all STRs.
+
+Expected heterozygosity can be calculated as $1 - \sum (p_i^2)$ where $p_i$ is the frequency of the $i^{th}$ allele. 
+
+
+```{r}
+expected_heterozygosity <- sapply(1:ncol(NistSTRs)/2, function(i) {
+  alleles <- table(c(NistSTRs[, (2*i-1)], NistSTRs[, 2*i]))
+  1 - sum((alleles/sum(alleles))^2)
+})
+
+hist(expected_heterozygosity, main = "Histogram of Expected Heterozygosity", xlab = "Heterozygosity")
+mean_expected_heterozygosity <- mean(expected_heterozygosity)
+```
+
+
+
+## 5. Calculate also the observed heterozygosity for each STR. Plot observed against ex- pected heterozy- gosity, using all STRs. What do you observe?
+
+Observed heterozygosity is the proportion of individuals that are heterozygous for each STR.
+
+```{r}
+observed_heterozygosity <- sapply(1:ncol(NistSTRs)/2, function(i) {
+  sum(NistSTRs[, (2*i-1)] != NistSTRs[, 2*i]) / nrow(NistSTRs)
+})
+
+plot(expected_heterozygosity, observed_heterozygosity, 
+     xlab = "Expected Heterozygosity", ylab = "Observed Heterozygosity", 
+     main = "Observed vs Expected Heterozygosity")
+```
+
+
+## 6. Compare, overall, the results you obtained for the SNP database with those you obtained for the STR database. What differences do you observe between these two types of genetic markers?
+
+TODO
