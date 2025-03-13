@@ -1,0 +1,160 @@
+---
+title: "Simple Linear Regression_lab - Pre"
+author: "Lídia Montero"
+date: "2022"
+output: word_document
+editor_options: 
+  chunk_output_type: console
+---
+
+# Load Data 
+
+```{r}
+
+
+# Clear plots
+if(!is.null(dev.list())) dev.off()
+
+# Clean workspace
+rm(list=ls())
+
+load("Anscombe73raw.RData")
+
+ls()
+anscombe
+
+attach(anscombe)
+summary(anscombe)
+
+```
+
+
+
+Nothing remarkable about suitability of a linear model to address the relationship of Y and X. Linear models is Y=3+0.5X
+
+```{r}
+# Set A
+par(mfrow=c(1,1))
+plot(XA,YA,pch=19)
+
+ma<-lm(YA~XA,data=anscombe)
+ls()
+summary(ma)
+lines(XA,fitted.values(ma))
+text(XA,YA,labels=row.names(anscombe),adj=-1)
+par(mfrow=c(2,2))
+plot(ma)
+```
+
+## Set B
+
+A linear model does not address properly the relationship of Y and X, since non linear relation can be seen.
+Residual analysis is a validation tool that supports model validation: residuals do not shown a random pattern, a sistematic profile is seen.
+
+```{r}
+# Set B
+par(mfrow=c(1,1))
+plot(XB,YB,pch=19,col="red")
+mb<-lm(YB~XB,data=anscombe)
+lines(XB,fitted(mb),col="red")
+ls()
+summary(mb)
+
+par(mfrow=c(2,2))
+plot(mb)
+mbb<-lm(YB~XB+I(XB^2),data=anscombe)
+summary(mbb)
+
+plot(YB~XB,pch=19,col="red")
+
+```
+
+## Set C
+
+A linear model does address the relationship of Y and X, but one observation does not follow the common pattern supported by the rest of the observations.
+Residual analysis is a validation tool that supports model validation: residuals do not shown a random pattern, a residual outlier is seen and normal distribution of residuals does not hold.
+Observation 3 is influent data, since it affects model parameters. A remarkable change in model parameters is seen whether considering obs. 3, or not.
+
+```{r}
+# Set C
+par(mfrow=c(1,1))
+plot(XC,YC,pch=19,col="darkgreen")
+text(XC,YC,label=row.names(anscombe),col="darkgreen",adj=1.5)
+mc<-lm(YC~XC,data=anscombe)
+lines(XC,fitted(mc),col="darkgreen")
+ls()
+summary(mc)
+
+par(mfrow=c(2,2))
+plot(mc)
+
+library(car)
+Boxplot(resid(mc),col="darkgreen")
+cooks.distance(mc)
+Boxplot(cooks.distance(mc),col="darkgreen")
+
+mcc<-lm(YC~XC,data=anscombe[-3,])
+summary(mcc)
+df <-anscombe[-3,]
+plot(df$XC,df$YC,pch=19,col="darkgreen")
+text(df$XC,df$YC,label=row.names(df),col="darkgreen",adj=1.5)
+```
+## Set D
+
+A linear model does address the relationship of Y and X, but one observation does not follow the common pattern supported by the rest of the observations.
+Residual analysis is a validation tool that supports model validation: residuals do not shown a random pattern, a 0 residual is found for 1 observation.
+Observation 8 is influent data, since it greatly affects model parameters. Model parameters are totally depending on one observation (obs. 8).
+
+
+```{r}
+# Set D
+par(mfrow=c(1,1))
+plot(XD,YD,pch=19,col="blue")
+text(XD,YD,label=row.names(anscombe),col="blue",adj=1.5)
+md<-lm(YD~XD,data=anscombe)
+lines(XD,fitted(md),col="blue")
+ls()
+summary(md)
+
+par(mfrow=c(2,2))
+plot(md)
+
+resid(md)
+cooks.distance(md)
+hatvalues(md)
+
+mdd<-lm(YD~XD,data=anscombe[-8,])
+summary(mdd)
+mean(YD[-8])
+df <-anscombe[-8,]
+plot(df$XD,df$YD,pch=19,col="darkgreen")
+text(df$XD,df$YD,label=row.names(df),col="darkgreen",adj=1.5)
+```
+
+All in all
+
+```{r}
+### Prospecció dels jocs de dades A,B,C,D
+par(mfrow=c(2,2))
+anscombe.lmA <- lm(anscombe$YA ~ anscombe$XA, data=anscombe)
+plot(anscombe$XA, anscombe$YA,pch=19,col=1)
+lines(anscombe$XA,anscombe.lmA$fitted.values, col=1, lty=3,lwd=2)
+text(x=anscombe$XA,y=anscombe$YA,labels=row.names(anscombe),adj=1.1, col=1)
+
+anscombe.lmB <- lm(anscombe$YB ~ anscombe$XB, data=anscombe)
+plot(anscombe$XB, anscombe$YB,pch=19,col=2)
+lines(anscombe$XB,anscombe.lmB$fitted.values, col=2, lty=3,lwd=2)
+text(x=anscombe$XB,y=anscombe$YB,labels=row.names(anscombe),adj=1.1, col=2)
+
+anscombe.lmC <- lm(anscombe$YC ~ anscombe$XC, data=anscombe)
+plot(anscombe$XC, anscombe$YC,pch=19,col=3)
+lines(anscombe$XC,anscombe.lmC$fitted.values, col=3, lty=3,lwd=2)
+text(x=anscombe$XC,y=anscombe$YC,labels=row.names(anscombe),adj=1.1, col=3)
+
+anscombe.lmD <- lm(anscombe$YD ~ anscombe$XD, data=anscombe)
+plot(anscombe$XD, anscombe$YD,pch=19,col=4)
+lines(anscombe$XD,anscombe.lmD$fitted.values, col=4, lty=3,lwd=2)
+text(x=anscombe$XD,y=anscombe$YD,labels=row.names(anscombe),adj=1.1, col=4)
+
+
+```

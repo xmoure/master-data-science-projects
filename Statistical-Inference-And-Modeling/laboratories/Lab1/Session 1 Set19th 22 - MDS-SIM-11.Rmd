@@ -1,0 +1,237 @@
+---
+title: "Session1 Set19th MDS-SIM - 11"
+author: "Lídia M"
+date: '2022-09-12'
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+This is Session 1
+
+```{r}
+library(car)
+Prestige
+df <- Prestige
+
+# EDA
+
+summary(df)
+
+# Remove one column
+df$census <- NULL
+summary(df)
+
+# Graphics
+
+plot(df[,1:4])
+plot(df[,c(4,1:3)])
+
+# Modern graphics
+library(GGally)
+ggpairs(df[,c(4,1:3)])
+```
+
+
+# EDA for categorical variables
+
+```{r}
+# Numeric
+summary(df$type)
+
+table(df$type,useNA="always")
+prop.table(table(df$type,useNA="always"))
+round(100*prop.table(table(df$type,useNA="always")),dig=2)
+
+barplot( table(df$type ))
+barplot( table(df$type ),main="Maybe my first bar chart")
+barplot( table(df$type ),main="Maybe my first bar chart",col=rainbow(3))
+barplot( table(df$type ),main="Maybe my first bar chart",col=c("yellow","red","blue"))
+
+pie( table(df$type ))
+pie( table(df$type ),main="Maybe my first bar chart",col=c("yellow","red","blue"))
+legend("right",legend=levels(df$type))
+legend("right",legend=levels(df$type),pch=c(19,19,19),col=c("yellow","red","blue"))
+
+# Some hints
+
+head(df,8)
+tail(df,3)
+
+prestige
+df$prestige
+
+summary(prestige)
+
+with(df, summary(prestige))
+
+attach(df)
+summary(prestige)
+detach(df)
+```
+
+# CSI
+
+```{r}
+# is prestige target normally distributed?
+
+hist(df$prestige)
+# Overlap normal distribution having the mean and std deviation
+mm <- mean(df$prestige); ss <- sd(df$prestige);mm;ss
+
+hist(df$prestige,12,freq=FALSE)
+curve(dnorm(x,mm,ss),col="red",lwd=2,add=T)
+
+qqnorm(df$prestige) # next sessions
+
+# inference - Shapiro-Wilk when independent holds
+shapiro.test(df$prestige)
+
+# Correlation between the observations
+
+acf(df$prestige)
+
+llran <- sample(1:102,102);llran
+ddf<-df[llran,]
+
+acf(ddf$prestige)
+# Alternative tool, based inference: Durbin-test
+library(lmtest)
+dwtest(df$prestige~1)
+dwtest(ddf$prestige~1)
+```
+
+# Connected to next wednesday session
+
+```{r}
+
+# Testing hypothesis about population mean: H0: mu = 50
+
+t.test(ddf$prestige, confidence = 0.95,alternative = "two.sided")
+
+t.test(ddf$prestige-50, confidence = 0.95,alternative = "two.sided")
+t.test(ddf$prestige-50, confidence = 0.95,alternative = "greater")
+t.test(ddf$prestige-50, confidence = 0.95,alternative = "less")
+
+lci <- mm - qt(0.95,101)*ss/sqrt(102); lci
+uci <- mm + qt(0.95,101)*ss/sqrt(102); uci
+lci;uci  # Useful for one-sided hypothesis
+
+# CI 95% Two-sided
+lci <- mm - qt(0.975,101)*ss/sqrt(102); lci
+uci <- mm + qt(0.975,101)*ss/sqrt(102); uci
+lci;uci
+
+# If the variance (population) is known: sigma = 17
+# Two-sided inference
+
+lci <- mm - qnorm(0.975)*17/sqrt(102); lci
+uci <- mm + qnorm(0.975)*17/sqrt(102); uci
+lci;uci
+
+zeta.st <- (mm-50)/(17/sqrt(102));zeta.st
+
+# Two-sided
+qnorm(0.975)
+
+# Lecture notes
+# abs(zeta.st) is less than 1.96   I can not reject H0
+
+# One-sided H1 less than
+-qnorm(0.95)
+
+# zeta.st = -1.88 < -1.65  -> H0 is rejected H1 holds true mean is less than 50
+
+# One-sided H1 greater than
+qnorm(0.95)
+# zeta.st < 1.65 H0 can not be rejected 
+
+# One sided H1 less than 50  - Variance is known
+zeta.st
+pval<-pnorm(zeta.st);pval   # pvalue < 0.05 (significance level) - > H0 rejected thus true mean less than 50
+
+```
+
+Discuss tests on variances
+
+Warning: normal distribution is important
+
+```{r}
+library(EnvStats)
+
+vv = var(df$prestige); vv
+res.var<-varTest(df$prestige, alternative = "two.sided", conf.level = 0.95, sigma.squared = 100 ) # Default values for alternative and confidence level
+print(res.var)
+
+res.var<-varTest(df$prestige, alternative = "less", conf.level = 0.95, sigma.squared = 100 ) # Default values for alternative and confidence level
+print(res.var)
+
+res.var<-varTest(df$prestige, alternative = "greater", conf.level = 0.95, sigma.squared = 100 ) # Default values for alternative and confidence level
+print(res.var)
+
+
+qchisq(0.025,101)
+qchisq(0.975,101)
+```
+
+Discussion about means and variances in groups
+
+```{r}
+
+ddf$f.prof <- 0
+ddf$f.prof <- ifelse(ddf$type=="prof",1,0)
+summary(ddf$f.prof)
+ll <- which( is.na(ddf$type ))
+ddf$f.prof[ll] <- 0
+
+ddf$f.prof <- factor( ddf$f.prof, levels=0:1, labels=c("Prof.No","Prof.Yes"))
+summary(ddf$f.prof)
+```
+
+Means on groups
+
+```{r}
+Boxplot(ddf$prestige~ddf$f.prof,id=list(n=Inf, labels=row.names(ddf)))
+tapply(ddf$prestige,ddf$f.prof,summary)
+
+# Non-parametric test - Normal distribution not needed - 2 groups
+wilcox.test(ddf$prestige~ddf$f.prof)
+wilcox.test(ddf$prestige~ddf$type)
+
+# Non-parametric test - Normal distribution not needed - more than 2 groups
+
+kruskal.test(ddf$prestige~ddf$type)
+Boxplot(ddf$prestige~ddf$type)
+
+# Parametric tests on means - More than 2 groups
+oneway.test(ddf$prestige~ddf$type)
+# Parametric tests on means -  2 groups
+t.test(ddf$prestige~ddf$f.prof)
+
+
+```
+
+Common variances defined by groups
+
+```{r}
+
+# Parametric test H0: Common population variances in groups
+
+bartlett.test(ddf$prestige ~ ddf$type)
+
+# Non Parametric test H0: Common population variances in groups
+
+fligner.test(ddf$prestige ~ ddf$type)
+
+# Parametric test H0: Common population variances in 2 groups
+
+var.test(ddf$prestige ~ ddf$f.prof)
+
+# CASE OF MEANs: H0 rjected 
+
+# Parametric
+pairwise.t.test(ddf$prestige,ddf$type)
+
+```
+
+

@@ -1,0 +1,439 @@
+---
+title: "LAB Session 7 - Polytomic Outcome"
+author: "Lídia Montero"
+date: "2021"
+output: word_document
+editor_options: 
+  chunk_output_type: console
+---
+
+This is an R Markdown document. 
+We are showing some examples of GLMz. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>. Use * to provide emphasis such as *italics* and **bold**.
+
+Create lists: Unordered * and +     or   ordered   1. 2.  
+
+  1. Item 1
+  2. Item 2
+    + Item 2a
+    + Item 2b
+
+# Header 1
+## Header 2
+
+# Load libraries and set current directory
+
+```{r}
+# Clear plots
+if(!is.null(dev.list())) dev.off()
+
+# Clean workspace
+rm(list=ls())
+options(contrasts=c("contr.treatment","contr.treatment"))
+# setwd("C:/Users/lmontero/Dropbox/DOCENCIA/FIB-SIM/2021-22/LABORATORY/Practice7")
+
+library(car)
+library(FactoMineR)
+library(lmtest)
+library(effects)
+library(AER)
+library(nnet)
+library(MNLpred)
+library(ggplot2)
+library(scales)
+```
+
+# Womenlf
+
+```{r}
+load("Womenlf.RData")
+summary(womenlf)
+str(womenlf)
+df <- womenlf
+
+Boxplot(womenlf$income, id=list(n=4))
+intervals <- c(0,  5 ,10 ,15 ,20 ,25 ,30, 46)
+womenlf$gincome <- factor(cut(womenlf$income,breaks=intervals))
+table(womenlf$gincome)
+cintervals<- tapply(womenlf$income,womenlf$gincome,median)
+womenlf$ngincome<-factor(cut(womenlf$income,breaks=intervals))
+womenlf$ngincome<-factor(womenlf$ngincome,labels=cintervals)
+womenlf$ngincome<-as.numeric(levels(womenlf$ngincome))[womenlf$ngincome]
+
+womenlf$bwork<-ifelse(womenlf$work=="not_work",0,1)
+womenlf$bwork<-factor(womenlf$bwork,labels=c("not_work","work"))
+```
+
+
+## Nominal models
+
+```{r}
+# Point 4
+summary(womenlf)
+mm0 <-multinom( work~1, data=womenlf,weight=ones )
+mm3 <-multinom( work~sons + income, data=womenlf,weight=ones )
+mm8 <-multinom( work~region+sons*income, data=womenlf,weight=ones )
+
+anova(mm3,mm8,test='Chisq' )
+(mm0$dev - mm8$dev)/16
+Anova(mm8, test="LR") # Net-Effects test
+mmodel <- step( mm8 )
+summary(mm3)
+#       log( xxxxtime/not_work):
+#       logit 1: parttime vs not_work
+#       logit 2: fulltime vs not_work
+
+mm0$dev - mm3$dev
+
+AIC(mm0,mm3,mm8) # mm3 434.8819
+```
+
+
+```{r}
+# Point 8
+mm3 <-multinom(  work~sons+income, data=womenlf,weight=ones )
+mm33 <-multinom(  work~sons+income+I((income-mean(income))^2), data=womenlf,weight=ones )
+anova(mm3,mm33,test='Chisq')
+
+tt<-table(predict(mm3),womenlf$work);tt
+100*sum(diag(tt))/sum(tt)
+```
+
+# Point 11
+
+```{r}
+mm3c <-multinom(  work~sons+I(income-mean(income)), data=womenlf,weight=ones )
+summary(mm3c)
+summary(mm3)
+
+logodd2=0-1.3306078 + 0.02149908
+logodd3=0.5480198 -2.55859890
+logodd2;logodd3
+odd2=exp(logodd2);odd2
+odd3=exp(logodd3);odd3
+prob1=1/(1+odd2+odd3)
+prob2=prob1*odd2
+prob3=prob1*odd3
+prob1;prob2;prob3
+
+predict(mm3c, type="probs")
+predict(mm3c, type="probs",newdata=data.frame(sons="present",income=14.75665))
+
+nrow(womenlf)-6
+mm3$edf
+mm3$deviance
+1-pchisq(mm3$deviance,nrow(womenlf)-mm3$edf)
+```
+
+## Hierarchical models
+
+```{r}
+# Point 12
+########################################################################################
+#       Hierarchical models:
+#       Not Work    /   Work
+#                       Fulltime / Parttime
+#       Model Work / Not Work:
+
+hm1m3 <- glm(bwork~income+sons,data=womenlf,family=binomial)
+summary(hm1m3)
+
+hm1m8 <- glm(bwork~income*sons + region,data=womenlf,family=binomial)
+step(hm1m8)
+```
+
+# Point 13
+
+```{r}
+table( ifelse(predict(hm1m3,type="response")>0.5,"pwork","pnotwork"),womenlf$bwork)
+
+# Interpret HL1 best model
+coef(hm1m3)
+exp(coef(hm1m3)[2:3])
+
+# Prediction for a HH with sons 'present' and mean income
+# Upper level
+
+predict(hm1m3,type="response",newdata=data.frame(sons="present",income=14.75665))
+```
+
+# Point 14
+
+```{r}
+summary(womenlf)
+
+hm2m8 <- glm(work~income*sons + region,data=womenlf,family=binomial,subset=bwork=="work")
+Anova(hm2m8, test="LR")
+step( hm2m8 )
+
+hm2m3 <- glm(work~income+sons,data=womenlf,family=binomial,subset=bwork=="work")
+summary(hm2m3)
+AIC(hm1m3)
+AIC(hm2m3)
+110.49+325.73
+```
+
+# Point 15 and 16
+
+```{r}
+# Lower level
+# Diagnostics and prediction
+hm2m3c <- glm(work~I(income-mean(income))+sons,data=womenlf,family=binomial,subset=bwork=="work")
+summary(hm2m3c)
+summary(womenlf[womenlf$bwork=="work",])
+hm1m3c <- glm(bwork~I(income-mean(income))+sons,data=womenlf,family=binomial)
+summary(hm1m3c)
+
+#Coefficients: Full/Part
+#                          Estimate Std. Error z value Pr(>|z|)    
+# (Intercept)               1.89486    0.42476   4.461 8.16e-06 ***
+# I(income - mean(income)) -0.10727    0.03915  -2.740  0.00615 ** 
+# sonspresent              -2.65146    0.54108  -4.900 9.57e-07 ***
+#Coefficients: Work/NotWork
+#                          Estimate Std. Error z value Pr(>|z|)    
+# (Intercept)               0.71150    0.24230   2.936  0.00332 ** 
+# I(income - mean(income)) -0.04231    0.01978  -2.139  0.03244 *  
+# sonspresent              -1.57565    0.29226  -5.391    7e-08 ***
+#HL2
+logodd3_2=1.89486-2.65146;logodd3_2
+odd3_2=exp(logodd3_2);odd3_2
+prob3cW=odd3_2/(1+odd3_2);prob3cW
+prob2cW=1-prob3cW;prob2cW
+
+predict(hm2m3c,type="response",newdata=data.frame(sons="present",income=14.75665))
+1-predict(hm2m3c,type="response",newdata=data.frame(sons="present",income=14.75665))
+
+#HL1
+logoddW_1=0.71150-1.57565;logoddW_1
+oddW_1=exp(logoddW_1);oddW_1
+prW=oddW_1/(1+oddW_1);prW;
+pr1=1-prW;pr1
+pr2=prob2cW*prW;pr2
+pr3=prob3cW*prW;pr3
+pr1+pr2+pr3
+
+table( ifelse(predict(hm1m3c,type="response")>0.5,"pwork","pnotwork"),womenlf$bwork)
+table(factor(ifelse(predict(hm2m3c,type="response")<0.5,"pparttime","pfulltime"),levels=c("pparttime","pfulltime")),womenlf$work[womenlf$work!="not_work"])
+
+100*(132+33+55)/263
+```
+
+# Point 17
+
+```{r}
+
+AIC(hm1m3)+AIC(hm2m3)
+AIC(mm3) # Nominal proposal is better according to AIC. Nevertheless, confusion tgables
+```
+
+# Point 18: Ordinal models
+
+```{r}
+library(MASS)
+om0 <-polr( work~1, data=womenlf,weight=ones )
+om1 <-polr( work~sons, data=womenlf,weight=ones )
+om3 <-polr( work~sons + income, data=womenlf,weight=ones )
+om8 <-polr( work~region+sons*income, data=womenlf,weight=ones )
+
+summary( om3 )
+Anova( om8, test="LR")
+step( om8 )
+
+names(om8)
+om0$deviance - om3$deviance
+1-pchisq(om3$deviance,om3$df.residual)
+om3$deviance
+```
+
+# Punt 21
+
+```{r}
+om33 <-polr(  work~sons+income+I((income-mean(income))^2), data=womenlf,weight=ones )
+anova(om3,om33,test='Chisq')
+```
+
+# Punt 22
+
+```{r}
+
+library(effects)
+Effect(focal.predictors = c("income","sons"), om3)
+plot(Effect(focal.predictors = c("income","sons"), om3), rug = FALSE)
+
+summary(om3)
+om3c <-polr(  work~sons+I((income-mean(income))), data=womenlf,weight=ones )
+summary(om3c)
+#Coefficients:
+#                  Value Std. Error   t value
+#income      -0.05390061 0.01949010 -2.765538
+#sonspresent -1.97195668 0.28694823 -6.872169
+
+# Intercepts:
+#                   Value   Std. Error t value
+# not_work|parttime -1.0566  0.2450    -4.3122
+# parttime|fulltime -0.1455  0.2328    -0.6251
+
+#Residual Deviance: 441.663
+#AIC: 449.663
+
+#       Explanatory variables appear with opposite sign as described in lecture notes
+#       (LATENT VARIABLE).
+# Interpret in probability terms: sons present and income on the mean 
+
+
+logodd1=0-1.0566+1.97195668;logodd1
+logodd2=0-0.1455+1.97195668;logodd2
+
+gam1=exp(logodd1)/(1+exp(logodd1));gam1
+gam2=exp(logodd2)/(1+exp(logodd2));gam2
+pi1=gam1;pi1
+pi2=gam2-gam1;pi2
+pi3=1-gam2;pi3
+
+predict(om3, type="probs", newdata=data.frame(sons="present",income=mean(womenlf$income)))
+#       Most suitable model?
+AIC(hm1m3)+AIC(hm2m3)
+AIC(mm3) 
+AIC(om3)# Nominal proposal is better according to AIC. Nevertheless, confusion tgables
+
+# Confusion table
+tt<-table(predict(om3,type="class"),womenlf$work);tt
+100*sum(diag(tt))/sum(tt)
+
+  #          not_work parttime fulltime
+  # not_work      133       36       23
+  # parttime        0        0        0
+  # fulltime       22        6       43
+
+# Link
+om3p <-polr(  work~sons+income, data=womenlf,weight=ones, method="probit" )
+om3g <-polr(  work~sons+income, data=womenlf,weight=ones, method="cloglog" )
+AIC( om3, om3p, om3g)  
+AIC(hm1m3)+AIC(hm2m3)
+AIC(mm3) 
+AIC(om3g)
+```
+
+# Housing
+
+```{r}
+options(contrasts=c("contr.treatment","contr.treatment"))
+#options(contrasts = c("contr.treatment", "contr.poly"))
+
+load("copenhaguen.RData")
+summary(copen)
+
+# Order levels in factors
+
+copen$housing <- ordered(copen$housing, levels=c("tower","apartments","atrium","terraced"))
+copen$influence <- ordered(copen$influence, levels=c("low","medium","high"))
+copen$contact <- ordered(copen$contact, levels=c("low","high"))
+copen$satisfaction <- ordered(copen$satisfaction, levels=c("low","medium","high"))
+
+summary(copen)
+
+#       Nominal Outcome model:
+#       satisfaction = housing + influence + contact
+
+library(MASS)
+library(nnet)
+copen.mult2 <- multinom(satisfaction~(housing+influence+contact)^2,data=copen,weights=n)
+Anova(copen.mult2, test="LR")
+
+copen.mult <- step( copen.mult2 )
+summary(copen.mult)
+Anova(copen.mult,test="LR")
+
+#       Obtained estimates nominal outcome:
+#       logit 1: medium vs low
+#       logit 2: high vs low
+
+# Coefficients:
+#        (Intercept) housingapartments housingatrium housingterraced influencemedium
+# medium  -0.4192316        -0.4356851     0.1313663      -0.6665728       0.4464003
+# high    -0.1387453        -0.7356261    -0.4079808      -1.4123333       0.7348626
+#        influencehigh contacthigh
+# medium     0.6649367   0.3608513
+# high       1.6126294   0.4818236
+
+#       Ordinal Model :
+#       satisfaction = housing * influence + contact
+
+library(MASS)
+copen.polr <- polr(satisfaction~housing*influence+contact,data=copen,weights=n)
+summary(copen.polr)
+Anova(copen.polr)
+copen.polrp <- polr(satisfaction~housing*influence+contact,data=copen,weights=n, method="probit" )
+summary(copen.polrp)
+
+copen.polrg <- polr(satisfaction~housing*influence+contact,data=copen,weights=n,  method="cloglog")
+summary(copen.polrg)
+
+# Which is the best?
+#       Best treatment?
+#       Ordinal response ?
+#       Nominal response ?
+
+#       Confusion table
+
+tto<-xtabs(copen$n ~ copen$satisfaction+predict(copen.polr));tto
+ttm<-xtabs(copen$n ~ copen$satisfaction+predict(copen.mult));ttm
+100*sum(diag(tto))/sum(tto)
+100*sum(diag(ttm))/sum(ttm)
+# Take a look to AICs
+# Ordinal: AIC: 3484.64 (logit)  AIC: 3485.331 (probit)  AIC: 3494.878 (cloglog)
+# Multinomial: AIC: 3498.084  
+# 
+AIC(copen.polr, copen.polrg, copen.polrp,copen.mult)
+
+# Interpret zeta parameters
+coef(copen.polr)
+copen.polr$zeta
+codds<-exp(copen.polr$zeta);codds
+cprobs<-codds/(1+codds);cprobs
+cprobset<-c(0,cprobs,1)
+diff(cprobset)
+
+# Interpret logit polr model for obs contact 'high', influence 'low' and housing 'tower'
+
+coef(copen.polr)
+eta<-copen.polr$zeta - coef(copen.polr)[6] # Pay attention to - sign
+codds<-exp(eta);codds
+cprobs<-codds/(1+codds);cprobs
+cprobset<-c(0,cprobs,1)
+diff(cprobset)
+```
+# Cheese tasting
+
+```{r}
+load("C:/Users/lmontero/Dropbox/DOCENCIA/FIB-SIM/2021-22/LABORATORY/Practice7/cheese.RData")
+summary(cheese)
+```
+
+```{r}
+om0 <- polr( c.taste ~ 1, data = cheese, weights=y )
+om1 <- polr( c.taste ~ additive, data = cheese, weights=y )
+om1p <- polr( c.taste ~ additive, data = cheese, method="probit",weights=y )
+om1cg <- polr( c.taste ~ additive, data = cheese, method="cloglog",weights=y )
+anova( om0 , om1, test="Chisq")
+summary(om1)
+summary(om1p)
+summary(om1cg)
+
+AIC( om1, om1p, om1cg )
+
+om1p$zeta
+cpA <- c(0,pnorm(om1p$zeta),1); cpA
+pA<-diff(cpA);pA
+
+om1p$coef
+om1p$zeta - om1p$coef[3]
+cpD <- c(0,pnorm(om1p$zeta - om1p$coef[3]),1); cpD
+pD<-diff(cpD);pD
+
+# Visualització Ordinal
+library(effects)
+cex=0.5
+plot(Effect(focal.predictors = c("additive"), om1,cex=0.5))
+
+```
+

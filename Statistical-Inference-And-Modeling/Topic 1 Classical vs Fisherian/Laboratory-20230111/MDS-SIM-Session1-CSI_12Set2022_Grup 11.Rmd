@@ -1,0 +1,243 @@
+---
+title: "CSI_lab - Session 1"
+author: "Lídia Montero"
+date: "2021"
+output: word_document
+editor_options: 
+  chunk_output_type: console
+---
+
+This is an R Markdown document. 
+We are showing some examples of GLMz. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>. Use * to provide emphasis such as *italics* and **bold**.
+
+Create lists: Unordered * and +     or   ordered   1. 2.  
+
+  1. Item 1
+  2. Item 2
+    + Item 2a
+    + Item 2b
+
+# Header 1
+## Header 2
+
+# Load Data Prestige
+
+```{r}
+
+# Clear plots
+if(!is.null(dev.list())) dev.off()
+
+# Clean workspace
+rm(list=ls())
+
+library(car)
+Prestige
+df<-Prestige
+
+```
+
+## EDA
+
+```{r}
+# Numeric summary
+summary(df)
+
+# Graphics: fast
+plot(df[,1:4])
+plot(df[,c(4,1:3)])
+
+library(ggplot2)
+library(GGally)
+ggpairs(df[,c(4,1:3)])
+Boxplot(df[,1:4])
+
+# Target
+stripchart(prestige~type,method="stack",xlab="prestige",pch=19,col=3,main="Dotplot prestige",data=df)
+
+# Missing data
+# Artifitially setting of missing data for 0% women
+ll <- which( df$women==0); length(ll)
+df$women[ ll ] <- NA
+
+```
+
+# Define a new indicator factor for type of job 'prof'
+
+```{r}
+df$f.prof<-0
+df$f.prof[df$type=="prof"]<-1
+table(df$type, useNA = "ifany")
+df$f.prof
+table(df$f.prof)
+df$f.prof<-factor(df$f.prof,labels=c("Prof.No","Prof.Yes"))
+
+summary(df)
+levels(df$type) <- paste0("f.type-", levels(df$type) )
+
+ggpairs(df[,c(4,1:3,6)],aes(colour=type))
+
+```
+
+# Normality Issues for target prestige
+
+```{r}
+hist(df$prestige,freq=F,breaks=10)
+m=mean(df$prestige);std=sd(df$prestige);m;std
+curve(dnorm(x,m,std),col="red",lwd=2,add=T)
+
+shapiro.test(df$prestige)  # Not necessary here: package lmtest has some additional normality tests
+shapiro.test(log(df$prestige))
+
+library(lmtest)
+acf(df$prestige)
+dwtest(prestige~1,data=df)
+dwtest(prestige~type,data=df)
+
+# We will generate data from the AR(1) model Xt=.9Xt-1+Wt
+corsample <- arima.sim(model = list(order = c(1, 0, 0), ar = .9), n = 1000) 
+acf(corsample)
+pacf(corsample)
+
+```
+
+Test on normal mean: confidence interval
+
+```{r}
+t.test(df$prestige, alternative = "two.sided", conf.level = 0.95 ) # Default values
+t.test(df$prestige, alternative = "less", conf.level = 0.95 ) # Less
+t.test(df$prestige, alternative = "greater", conf.level = 0.95 ) # Default values
+t.test(df$prestige, alternative = "two.sided", conf.level = 0.99 ) # 99% CI
+
+t.test(df$prestige-50, alternative = "two.sided", conf.level = 0.95 ) # Bilateral
+t.test(df$prestige-50, alternative = "less", conf.level = 0.95 ) # less p(H1)=0.967
+t.test(df$prestige-50, alternative = "greater", conf.level = 0.95 ) # greater p(H1)=1-0.967
+
+# Calculate 95% CI for mean - Bilateral
+mm = mean( df$prestige ); ss = sd( df$prestige ); mm; ss
+
+meanlci <- mm - qt(0.975, 101) * ss/sqrt(nrow(df))
+meanhci <- mm + qt(0.975, 101) * ss/sqrt(nrow(df))
+meanlci;meanhci
+
+# Lower bound 95% for mean: (lower bount to + Inf)
+meanlci <- mm - qt(0.95, 101) * ss/sqrt(nrow(df)); meanlci
+
+# Upper bound 95% for mean (-Inf to upper bound)
+meanhci <- mm + qt(0.95, 101) * ss/sqrt(nrow(df)); meanhci
+
+# Aproximation 95% CI for mean - Bilateral
+meanlci <- mm - qnorm(0.975) * ss/sqrt(nrow(df))
+meanhci <- mm + qnorm(0.975) * ss/sqrt(nrow(df))
+meanlci;meanhci
+```
+
+Test on normal variance from a normal population: confidence interval
+
+```{r}
+library(EnvStats)
+vv = var(df$prestige); vv
+varTest(df$prestige, alternative = "two.sided", conf.level = 0.95, sigma.squared = vv ) # Default values for alternative and confidence level
+varTest(df$prestige, alternative = "greater", conf.level = 0.95, sigma.squared = vv )
+varTest(df$prestige, alternative = "less", conf.level = 0.95, sigma.squared = vv )
+
+varTest(df$prestige, alternative = "greater", conf.level = 0.95, sigma.squared = 100 )
+varTest(df$prestige, alternative = "less", conf.level = 0.95, sigma.squared = 100 )
+varTest(df$prestige, alternative = "less", conf.level = 0.95, sigma.squared = 600 )
+varTest(df$prestige, alternative = "greater", conf.level = 0.95, sigma.squared = 600 )
+
+# Calculate 95% CI for variance  - Bilateral
+
+varlci <- (nrow(df) - 1)*vv / qchisq(0.975, 101) 
+varhci <- (nrow(df) - 1)*vv / qchisq(0.025, 101) 
+varlci;varhci
+
+# Lower bound 95% for var: (lower bount to + Inf)
+varlci <- (nrow(df) - 1)*vv / qchisq(0.95, 101); varlci
+
+# Upper bound 95% for mean (0 to upper bound)
+varhci <- (nrow(df) - 1)*vv / qchisq(0.05, 101); varhci
+```
+
+Fins aquí 20 Set 2021
+
+# Global Association among numeric variables
+
+```{r}
+# Numeric insights
+cor(df[,c(4,1:3)],method="pearson") # Parametric
+cor(df[,c(4,1:3)],method="spearman") # Non Parametric
+
+# Graphics
+plot(df[,c(4,1:3)])
+
+# Inferential Tools
+# 
+cor.test(df$prestige,df$income,method="spearman")
+cor.test(df$prestige,df$income,method="spearman",data=df)
+```
+
+# Global Association Y~A (binary) and Y~C (polytomic)
+
+```{r}
+# Numeric
+with(df, tapply(prestige,type,summary))
+# Graphics
+Boxplot(prestige~type,data=df, id=list(n=Inf,labels=row.names(df))) # It does not work
+Boxplot(prestige~type,data=df[!is.na(df$type),], id=list( n=Inf, labels = row.names(df[!is.na(df$type),] ) ) )
+
+# Numeric
+with(df, tapply(prestige,f.prof,summary))
+# Graphics
+Boxplot(prestige~f.prof,data=df, id=list(n=Inf,labels=row.names(df))) # It does work
+```
+
+Tests on means
+
+```{r}
+
+# Inferential tools
+
+oneway.test(prestige~type,data=df)  # Parametric
+kruskal.test(prestige~type,data=df) # Non Parametric
+
+
+# Inferential tools for a binary factor
+
+t.test(prestige~f.prof,data=df)  # Parametric
+wilcox.test(prestige~f.prof,data=df) # Non Parametric
+```
+
+Specific Association Tests on means Y~C (polytomic)
+
+```{r}
+
+# Inferential tools
+
+pairwise.t.test(df$prestige,df$type)  # Parametric
+pairwise.wilcox.test(df$prestige,df$type) # Non Parametric
+
+pairwise.t.test(df$prestige,df$type, alternative="less")  # Parametric
+pairwise.wilcox.test(df$prestige,df$type, alternative="less") # Non Parametric
+
+pairwise.t.test(df$prestige,df$type, alternative="greater")  # Parametric
+pairwise.wilcox.test(df$prestige,df$type, alternative="greater") # Non Parametric
+```
+
+Tests on variances for groups defined by a factor
+
+```{r}
+
+# Inferential tools   C Polytomic factor
+
+bartlett.test(prestige~type,data=df)  # Parametric
+fligner.test(prestige~type,data=df) # Non Parametric
+
+# Inferential tools for a binary factor
+
+var.test(prestige~f.prof,data=df)  # Parametric
+fligner.test(prestige~f.prof,data=df) # Non Parametric
+bptest(prestige~type,data=df) # Breusch Pagan Test: popular in econometrics - Parametric Test
+```
+
+
+

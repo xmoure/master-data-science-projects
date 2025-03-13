@@ -1,0 +1,248 @@
+---
+title: "22-23-SIM-PARTIAL Template"
+author: "LÍdia Montero"
+date: "November, 3rd 2022"
+output: 
+  pdf_document: 
+    toc: true
+    toc_depth: 3
+    number_sections: true
+editor_options: 
+  chunk_output_type: console
+---
+
+# Boston Housing Data
+
+
+```{r,echo=FALSE}
+if(!is.null(dev.list())) dev.off()
+## null device
+## 1
+rm(list = ls())
+
+options(contrasts=c("contr.treatment","contr.treatment"))
+
+setwd("~/Desktop/SIM PARCIAL EXTRA")
+load("~/Desktop/SIM PARCIAL EXTRA/CollegeDistance.RData")
+
+
+# distance is the 10th
+# income is the 13th
+
+library(car)
+library(lmtest)
+library(FactoMineR)
+library(EnvStats)
+library(corrplot)
+```
+
+**1.	Determine thresholds for mild and severe outliers for wage. Are there any outliers? Indicate observation id’s and atypical number/s.**
+
+Severe outliers are in the range (Q1-3IQR, Q3+3IQR) and mild outliers are in the range (Q1-1.5IQR, Q3+1.5IQR), where IQR is Q3-Q1.
+
+We can see that there are not severe outliers.
+There are many mild outliers.
+
+
+```{r}
+summary(df)
+summa <- summary(df$wage)
+summa
+
+sev_out_ut <- summa[5]+ 3*(summa[5]- summa[2])
+sev_out_ut
+
+sev_out_lt <- summa[2] -3*(summa[5]- summa[2])
+sev_out_lt
+
+mild_out_ut <- summa[5] + 1.5*(summa[5]-summa[2])
+mild_out_ut
+
+mild_out_lt <- summa[2] -1.5*(summa[5]- summa[2])
+mild_out_lt
+
+Boxplot(df$wage)
+abline(h=sev_out_ut, col = "red")
+abline(h=sev_out_lt, col = "red")
+abline(h=mild_out_ut, col = "green")
+abline(h=mild_out_lt, col = "green")
+
+
+llsev <- which((df$wage > sev_out_ut) | (df$wage < sev_out_lt))
+llsev # no severe outliers
+
+llmild <- which((df$wage > mild_out_ut) | (df$wage < mild_out_lt))
+llmild
+
+```
+
+
+**2.	Replace by NA mild outliers in wage variable detected in Point 1 and use an imputation procedure discussed in class to fill outlier data points. Assess the consistency of imputed value/s.**
+
+I can use imputeMCA to do the imputation. 
+
+```{r}
+df[llmild, "wage"] <- NA
+# library(missMDA)
+# imp_res<-imputeMCA(df,method="EM")
+# imp_res$completeObs
+# 
+# Boxplot(df[imp_res$completeObs,])
+
+```
+
+**Remove from dataset those observations with NA in wage, those labelled as mild outliers.**
+
+
+**3.	Would you expect a family paying tuition fees of 900$ to have a shorter or longer college distance than a family paying 270$?**
+
+We can use the cor to see the correlation. We can see that tuition and distance and inversely correlated so when the distance goes up the tuition fee goes down. So, a family paying $900 has a shorter distance than a family paying 270 for tuition fees.
+
+```{r}
+# removal of mild outliers from dataset
+df <- df[-llmild,]
+
+cor(df[c(3,8:11)])
+corrplot(cor(df[c(3,8:11)]))
+```
+
+
+**4. Analyse the profile of the numeric target (distance) using condes() method. A detailed explanation of procedure results is requested.**
+
+Using condes we can see that unemp is positive correlated to distance. And that 
+score, education and tuition are negatively correlated to distance. 
+
+The categorical variables most correlated to distance are urban and ethnicity.
+If the school is not in an urban area is the most correlated to distance follow 
+by the students who father is not a college graduated.
+
+
+```{r}
+res.con = condes(df,10)
+res.con$quanti
+res.con$quali
+res.con$category
+```
+
+
+**5. Analyse the profile of the categorical target (income) using a suitable method. A detailed explanation of procedure results is requested when profiling low income (high income may be omitted).**
+
+For this we can use catdes.
+
+When the income is low we can see that the parents are not college graduated 
+and that the family does not own a house.
+When the income is high it is the other way around.
+
+The numerical variables most associated are education and score.
+
+```{r}
+res.cat=catdes(df,13)
+res.cat$test.chi2
+res.cat$category
+res.cat$quanti.var
+res.cat$quanti
+```
+
+
+**6.	Discuss whether a normal distribution would be a reasonable distribution for distance target.**
+
+To see if a normal distribution is reasonable we can see it graphically with an 
+histogram and we can use the shapiro test which null hypothesis is that there 
+is normal distribution.
+
+From the histogram we can see that it does not follow a normal distribution.
+The result for shapiro test is a p-value <<< 0 so we reject the null hypothesis.
+Thus it does not follow a normal distribution. 
+
+
+```{r}
+mm <- mean(df$distance)
+ss <- sd(df$distance)
+hist(df$distance)
+shapiro.test(df$distance)
+
+```
+
+
+**7.	Is there variance homogeneity in the distance target groups defined by ethnicity levels? Assess race characteristics.**
+
+Since we saw that it does not follow a normal distribution we can use a non 
+parametric test.
+We can use fligner test. The null hypothesis is that there is variance 
+homogeneity.
+We get a p-value < 2.2e-16 so we reject the null hypothesis. So there is at
+least one group with variance significantly different.
+
+```{r}
+tapply(df$distance, df$ethnicity, sd)
+Boxplot(df$distance~df$ethnicity)
+fligner.test(df$distance~df$ethnicity)
+
+```
+
+
+**8.	Distance target can be considered to be the equal across groups defined by  ethnicity levels? Use a two.sided test at 99% confidence.**
+
+We can use pairwise.wilcox test to asses this.
+We see that it is not equal among the groups.
+
+```{r}
+pairwise.wilcox.test(df$distance,df$ethnicity, exact=F)
+```
+
+**9.	State and test one.sided hypothesis to assess whether distance is greater for the afroamerican group than for the Hispanic group or the opposite at 99% confidence.**
+
+```{r}
+
+```
+
+**10.	The standard deviation of distance for the afam group should not exceed 2 miles. For the sample in afam group in your dataset, calculate the standard deviation of distance assuming a normal distribution. Stating any assumptions, you need (write them), test at the 1% level the null hypothesis that the population standard deviation is not larger than 2 miles against the alternative that it is.**
+
+Distance is in 10 miles. So 10/2 =5 
+
+To test this we can use varTest.
+H0: ss = 5^2
+H1: ss > 5^2
+
+
+```{r}
+llafam <- df[df$ethnicity == "afam",]
+varTest(llafam$distance, alternative="greater",conf.level =0.99 , sigma.squared = 5^2)
+```
+
+
+**11.	Figure out the 99% upper threshold for distance in afam ethnicity subpopulation variance. Normal distribution for distance is assumed to hold.**
+
+Upper threshold is 3.210785.
+
+```{r}
+varTest(llafam$distance, alternative="less",conf.level =0.99 , sigma.squared = 5^2)
+```
+
+
+**12.	Build a 99% two-sided confidence interval for the difference in the mean of distance between Hispanic and Afroamerican ethnicity groups. Assume that equal variances in the population distance does not hold and normal distribution of distance (to simplify the calculations) does hold, but justify if these assumptions are critical**
+
+```{r}
+```
+
+
+**13.	Determine a 99% confidence interval for the population proportion that represents a low income. Test the null hypothesis that low and high income groups have equal probability**
+
+We can use prop.test to test this.
+We get a p-value < 2.2e-16 so we reject the null hypothesis
+```{r}
+low_income <- df[df$income == "low",]
+prop.test( x= 3208, n = 4467 , p=0.5, conf.level = 0.99)
+```
+
+
+**14.	A new survey considered 1000 people, 660 were classified in the low income group. Determine a 99% confidence interval for the difference in the population proportion of low income accounting for the two sources. Test the null hypothesis that having a low income has a lower incidence in the survey than in the original sample**
+
+I can use the prop.test to test this.
+We get a p-value of 0.999 so we fail to reject the null hypothesis.
+
+```{r}
+prop.test( c(3208, 660), c(4467, 1000) ,alternative = "less", conf.level = 0.99)
+```
+
+**Do not forget to knit your .Rmd file to .pdf (or to word and afterwards to pdf) before posting it on the ATENEA platform**

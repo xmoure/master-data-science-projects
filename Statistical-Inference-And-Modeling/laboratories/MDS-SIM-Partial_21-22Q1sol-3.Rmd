@@ -1,0 +1,304 @@
+---
+title: "MDS-SIM-Partial_21-22Q1: Template for solutions to questions"
+author: "Your Name and ID Number"
+date: "November 8th, 2021"
+output:
+  word_document: default
+  pdf_document: default
+  html_document: default
+editor_options:
+  chunk_output_type: console
+---
+
+# Data Description
+
+Available variables:
+
+Nutrient analysis of pizzas (from https://data.world/sdhilip/pizza-datasets). Who likes pizza? I mean, there are so many things to like, let’s take a closer look! The data set pizza. Pizza.RData contains measurements that capture the kind of things that make a pizza tasty. Can you determine which pizza brand works best for you and explain why? The variables in the data set are:
+
+  -   brand: Pizza brand (class label)
+  -   id: Sample analysed
+  -   mois: Amount of water per 100 grams in the sample
+  -   prot: Amount of protein per 100 grams in the sample
+  -   fat: Amount of fat per 100 grams in the sample
+  -   ash: Amount of ash per 100 grams in the sample
+  -   sodium: Amount of sodium per 100 grams in the sample
+  -   carb: Amount of carbohydrates per 100 grams in the sample
+  -   cal: Amount of calories per 100 grams in the sample
+
+
+# List of Questions
+
+**Firstly, load dataset and check available variables.**
+
+```{r, include=FALSE, echo=FALSE}
+# Load Required Packages: to be increased over the course
+options(contrasts=c("contr.treatment","contr.treatment"))
+requiredPackages <- c("missMDA","effects","FactoMineR","car","factoextra","RColorBrewer","ggplot2","dplyr","ggmap","ggthemes","knitr","chemometrics","rpart","ROCR","corrr","readxl","RColorBrewer","ggplot2","corrplot","plotly","xlsx","reshape2","scales","stargazer","kableExtra")
+
+package.check <- lapply(requiredPackages, FUN = function(x) {
+  if (!require(x, character.only = TRUE)) {
+    install.packages(x, dependencies = TRUE)
+    library(x, character.only = TRUE)
+  }
+})
+#verify they are loaded
+search()
+
+```
+
+
+```{r}
+# Clear plots
+if(!is.null(dev.list())) dev.off()
+# Clean workspace
+rm(list=ls())
+
+setwd("C:/Users/lmontero/Dropbox/DOCENCIA/MUM-DATS/EXAMS/CURS21-22")
+pathfile<-"C:/Users/lmontero/Dropbox/DOCENCIA/MUM-DATS/EXAMS/CURS21-22/"
+# pizza <- read.table("Pizza.csv", header=T, dec=".", sep=",",stringsAsFactors =T)
+# df <- pizza
+# row.names(pizza) <- paste0(pizza$brand,".",pizza$id)
+# save(list=c("pizza","df"),file="Pizza.RData")
+load(paste0(pathfile,"Pizza.RData"))
+
+summary(df)
+names(df)
+
+vars_res <- names(df)[c(9)]
+vars_con <- names(df)[c(3:8)]
+vars_dis <- names(df)[c(10:11)]
+```
+
+**The amount of calories per 100 grams is selected as the numeric target.**
+
+**1.	Determine whether serial correlation is present on dataset or not.**
+
+*You have seen acf() method to plot autocorrelation in calories. The plot clearly shows a serial correlation. Durbin-Watson test is an inferential tool that addresses whether autocorrelation is present and the null hypothesis is clearly rejected, thus again, autocorrelation is present in the cal column of the pizza dataset.*
+
+```{r}
+acf(df$cal)
+library(lmtest)
+dwtest(df$cal~1)
+```
+
+**2.	Define a new variable containing the total amount of ingredients (water, protein, fat, ash and carbohydrates). Check consistency.**
+
+*Total sum of indicated ingredients accounts for 100 g in 292 observations and a less than 1 g deviation (above/below) can be seen in the rest of observations.*
+
+```{r}
+names(df)
+df$ingredients <- rowSums(df[,c(3:6,8)])
+summary( df$ingredients )
+table( df$ingredients )
+```
+
+**3.	Univariant severe outliers are also present in some variables. Determine them. **
+
+*Univariate severe outlier checking is addressed for all variables. There 271 observation without any outlier, 4 observations having 1 outlier (in sodium) and 25 observations having 2 outliers (on fat and sodium).*
+
+```{r}
+Boxplot( df[,c(3:9)])
+unidesfat <- summary( df$fat ); unidesfat
+thrusout <- unidesfat[5]+3*( unidesfat[5]-unidesfat[2]);thrusout
+llusout <- which( df$fat > thrusout ); llusout
+df$sevout <- 0
+df$sevout[ llusout ] <- 1
+boxplot( df$fat, range=3)$out
+Boxplot( df$fat, range=3, id=list(n=Inf,labels=rownames(df)))
+
+unidesash <- summary( df$ash ); unidesash
+thrusout <- unidesash[5]+3*( unidesash[5]-unidesash[2]);thrusout
+llusout <- which( df$ash > thrusout ); llusout
+if (length(llusout) > 0 ) df$sevout[ llusout ] <- df$sevout[ llusout ] + 1
+
+unidessod <- summary( df$sodium ); unidessod
+thrusout <- unidessod[5]+3*( unidessod[5]-unidessod[2]);thrusout
+llusout <- which( df$sodium > thrusout ); llusout
+if (length(llusout) > 0 ) df$sevout[ llusout ] <- df$sevout[ llusout ] + 1
+
+unidescal <- summary( df$cal ); unidescal
+thrusout <- unidescal[5]+3*( unidescal[5]-unidescal[2]);thrusout
+llusout <- which( df$cal > thrusout ); llusout
+if (length(llusout) > 0 ) df$sevout[ llusout ] <- df$sevout[ llusout ] + 1
+
+summary( df$sevout )
+table( df$sevout )
+
+```
+
+**4.	Are there multivariant outliers? Find them. Try to explain their singularity. Multivariant outliers,if present, are not going to be treated in this exercise: keep them as suplementary observations in the rest of the exercise. Which is the cut-off at 99.9% CI?**
+
+*There are 4 multivariant outliers according to the indicated criterion: observations 66-C 82-C 166-F and 296-J. Observation 166 without any doubt a multivariate outlier, the one with the largest Mahalanobis distance.*
+
+```{r}
+library(chemometrics)
+lapply(df[ ,3:9],table)
+res.mout <- Moutlier( df[ , c(4:9)], quantile = 0.999 )
+
+par(mfrow=c(1,1))
+plot( res.mout$md, res.mout$rd )
+abline( h=res.mout$cutoff, lwd=2, col="red")
+abline( v=res.mout$cutoff, lwd=2, col="red")
+
+llmout <- which( ( res.mout$md > res.mout$cutoff ) & (res.mout$rd > res.mout$cutoff) );llmout
+df[llmout,]
+res.mout$md[llmout]
+df$mout <- 0
+df$mout[ llmout ] <- 1
+df$mout <- factor( df$mout, labels = c("MvOut.No","MvOut.Yes"))
+
+```
+
+**5.	Indicate by using exploratory data analysis tools which are apparently the most associated variables with the numeric response variable (only the contributing variables to the ingredients are to be taken as active variables). Use also FactoMineR profiling tools at 99% significance level.**
+
+*The globally most associated numeric variables are fat (direct relation) and mois (inverse relation), following sodium and ash (direct relation). Brand is globally associated to cal, thus the number of calories per 100g of pizza depends on the brand. In particular, A and F brands are those having average caloric contribution greater than the mean (being A brand very remarkable) and J and I brands lie under the mean caloric contribution (mainly I brand).*
+
+```{r}
+res.con <- condes( df[,c(1,3:9)], num.var=8, proba = 0.01 )
+res.con$quanti
+res.con$quali
+res.con$category
+
+plot(df[,c(9,3:8)])
+cor(df[,c(9,3:8)], method="spearman")
+corrplot(cor(df[,c(9,3:8)], method="spearman"), is.corr=T)
+```
+
+**6.	Use brand target factor and determine the most relevant global associations at 99% CI. Profile A and I brands.**
+
+*Global association to brand factor is depending on mean carbohidrates, protein and water composition. Nevertheless, all available ingredients are shown to have average values depending on brand. 
+  -   Brand A has remarkable sodium, fat, cal, protein and ash over the global mean for those ingredients, while water and carbohidrates lie under their mean for A brand.
+  -   Brand B has a mean content of water, sodium, fat and ashes over the mean. Carbohidrate contents is under the mean.
+  -   Brand C shows a mean content of proteins, water and ashes over the mean and mean sodium, calories and carbohidrates under the mean. 
+  
+The same interpretation pattern has to be followed for the other brands.*
+
+```{r}
+res.cat <- catdes( df[,c(1,3:9)], num.var=1, proba = 0.01 )
+res.cat$quanti.var
+res.cat$quanti
+```
+
+**7.	Say a few words about the hypothetical distribution that was assumed in the past. Use graphical and inferential arguments.**
+
+*Either considering histogram chart, or by assessing normal distribution on the logarithm transformation. Using input data analysis and distribution fitting tools, the distribution is shown to lie close to lognormal in the beta area.*
+
+```{r}
+hist(df$cal,30)
+hist(log(df$cal),30)
+shapiro.test( log(df$cal) )
+library(fitdistrplus)
+descdist( df$cal )
+```
+
+**8.	Let us focus on cal variate dispersion behavior according to the brand. Use numeric, graphics and inferential tools to address the topic.**
+
+*Numeric summary across brand standard deviation for calories, allow to classify brands according to low standard deviation for I and J, medium for A, B, C, D, F and G and high for E and H. Inferential testing using Fligner-Killeen test a null hypothesis of homogeinity of variance allows to reject the null hypothesis because pvalue is 0.0003 lower than any common significative level.*
+
+```{r}
+tapply( df$cal, df$brand, sd ) # E and H overdispersed I and J underdispersed
+Boxplot( cal~brand, data = df )
+fligner.test( cal~brand, data = df )
+```
+
+**9.	Let us focus on cal variate mean behavior according to the brand. Use numeric, graphics and inferential tools to address whether the mean of the target depends on the brand or not.**
+
+*The mean calories for C, I and J brands seems to be less than those for other brands taking into account mean summary across brand levels. A brand has the highest value for mean calories and it is remarkable higher than the rest. Using the non-parametric Kruskal-Wallis homogeneity test for means, the null hypothesis is absolutely rejected (pvalue 2.2e-16).*
+
+```{r}
+tapply( df$cal, df$brand, mean ) # A overmean I undermean
+Boxplot( cal~brand, data = df )
+kruskal.test( cal~brand, data = df )
+```
+
+**10.	 Continuing with the former question, on the positive case which brands show a remarkable difference in mean behavior among them. Use one-sided tests.**
+
+*Pairwise non-parametric one-sided tests can be applied. A brand mean calories are significantively greater than other brand means. D brand mean is greater than C brand mean at 5% significance level. E brand mean calories is greater than C and D brand means. F and G brand mean calories are greater that B, C, D, and E brand means. J brand mean calories is greater than I brand mean.*
+
+```{r}
+pairwise.wilcox.test( df$cal, df$brand, alternative="less" )
+pairwise.wilcox.test( df$cal, df$brand, alternative="greater" )
+```
+
+**11.	The standard deviation of the number of calories for brand A should not exceed 0.15cal. For the simple random sample in your dataset calculate the deviation of calories for 100g assuming a normal distribution for 100 g calories. Stating any assumptions, you need (write them), test at the 1% level the null hypothesis that the population standard deviation is not larger than 0.15cal against the alternative that it is.**
+
+* Hipothesis testing for population variances on normal data is addressed using chi-squared distribution and sample variance. Null hypothesis is stated one-sided $$H_0:\sigma^2=0.15^2$$.  And $$H_1: \sigma^2>0.15^2$$. Chi-squared statistic takes a 33.32 value with 29-1=28 degrees of freedom. P value is 0.224 > 0.01 significance level, thus H0 fails to be rejected taking into account the subsample defined for A brand. Using varTest() is possible and the same result is obtained once arguments are properly set.*
+
+
+```{r}
+tapply(df$cal,df$brand,sd)
+table(df$brand)
+ss <- 0.16362880
+# H0: sigma^2= 0.15^2  H1: sigma > 0.15^2 Normal population  (n-1)ss^2/sigma^2 ~ X2(n-1)
+# (n-1)ss^2/sigma^2  
+
+chi<-(29-1)*(ss^2)/(0.15^2);chi
+1-pchisq(chi,28) # pvalue > 0.01 H0 can not be rejected
+
+# b - 99% CI
+library(EnvStats)
+x <- df$cal[df$brand=="A"];x
+varTest(x, sigma.squared=0.15^2, alternative="greater",conf.level=0.99)
+
+```
+
+**12.	Figure out the 99% upper threshold for the number of calories for brand A population variance. Normal distribution for calories is assumed to hold.**
+
+* Using varTest() once arguments are properly set, an upper value of 0.05527 is obtained for the variance and thus 0.2351 for the standard deviation of A brand calories.*
+
+```{r}
+varTest(x, sigma.squared=0.15^2, alternative="less",conf.level=0.99)
+sqrt(0.05526714)
+```
+
+
+**13. Build a 99% confidence interval for the difference in the mean of 100 g calories between brands A and C. Assume that equal variances in the population calories per brand does not hold.**
+
+* Equal variances for A and C brand calories can be tested using Fligner-Killeen test. Homogeneity of variances can not be rejected, thus a pooled variance can be calculated and a two-sided t.test assuming equal variances for the null hypothesis of mean calories being equal in both brands is clearly rejected. Mean cal difference (A - C) 99% CI is defined to be between 1.80 and 2.05.*
+
+```{r}
+tapply(df$cal,df$brand,mean)
+tapply(df$cal,df$brand,sd)
+table(df$brand)
+
+ll <- which( df$brand %in% c("A","C"))
+dff <- df[ll,]
+dff$brand <- factor(dff$brand)
+
+muA <- 4.773793
+muC <- 2.848889
+ssA <-0.16362880
+ssC <- 0.16362880
+
+ssta <-((ssA^2)/29)
+sstc <- ((ssC^2)/27)
+deffree <- ((ssta+sstc)^2); deffree
+denom<- ((ssta^2)/28)+((sstc^2)/26);denom
+deffree <- deffree / denom; deffree
+loth <- (muA - muC) - qt(0.995, deffree)*sqrt(((ssA^2)/29)+((ssC^2)/27));loth
+upth <- (muA - muC) + qt(0.995, deffree)*sqrt(((ssA^2)/29)+((ssC^2)/27));upth  
+loth;upth
+t.test(dff$cal~dff$brand, conf.level=0.99)
+fligner.test(dff$cal,dff$brand, conf.level=0.99)
+t.test(dff$cal~dff$brand, conf.level=0.99, var.equal = T)
+
+```
+
+**14. Out of 100 people, 60 prefer A to C. Determine a 99% confidence interval for the population proportion that favors A in front of C. Test the null hypothesis that selecting A and C has equal probability.**
+
+* An approximate proportion test can be addressed using prop.test() method and setting properly the arguments. Null hypothesis assuming equal A and C brand choice can not be rejected at the 1% significance level. 99% CI for A brand choice percentage lies between 47.14% and 71.61%.*
+
+```{r}
+prop.test(60, n=100, p=0.5, conf.level=0.99, correct=F) # H0 can not be rejected at 1%
+```
+
+**15. A second survey considered 200 people, 110 prefer A to C. Determine a 99% confidence interval for the difference in the population proportion that favors A in front of C accounting the two surveys. Test the null hypothesis that selecting A brand has a lower probability in the second of the surveys.**
+
+*Difference in proportions stands for 1st - 2on survey comparison. One-sided test is stated as $$H0: \pi_1<=\pi_2$$ and the alternative hypothesis is $$H1: \pi_1 >\pi_2$$. H0 fails to be rejected and 99% CI for proportion difference has a lower threshold of -0.090 (0 is included).*
+
+```{r}
+prop.test(c(60,110), n=c(100,200), conf.level=0.99, correct=F, alternative="greater") # H0 can not be rejected at 1%
+```
+
+**Do not forget to Knit to .pdf before posting your answers in ATENEA. **

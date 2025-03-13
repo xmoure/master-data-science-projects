@@ -1,0 +1,146 @@
+---
+title: "MDS-SIM-Partial_21-22Q1: Template for solutions to questions"
+author: "Your Name and ID Number"
+date: "November 8th, 2021"
+output:
+  pdf_document: default
+  word_document: default
+  html_document: default
+editor_options:
+  chunk_output_type: console
+---
+
+# Data Description
+
+Available variables:
+
+Nutrient analysis of pizzas (from https://data.world/sdhilip/pizza-datasets). Who likes pizza? I mean, there are so many things to like, let’s take a closer look! The data set pizza. Pizza.RData contains measurements that capture the kind of things that make a pizza tasty. Can you determine which pizza brand works best for you and explain why? The variables in the data set are:
+
+  -   brand: Pizza brand (class label)
+  -   id: Sample analysed
+  -   mois: Amount of water per 100 grams in the sample
+  -   prot: Amount of protein per 100 grams in the sample
+  -   fat: Amount of fat per 100 grams in the sample
+  -   ash: Amount of ash per 100 grams in the sample
+  -   sodium: Amount of sodium per 100 grams in the sample
+  -   carb: Amount of carbohydrates per 100 grams in the sample
+  -   cal: Amount of calories per 100 grams in the sample
+
+
+# List of Questions
+
+**Firstly, load dataset and check available variables.**
+
+```{r, include=FALSE, echo=FALSE}
+# Load Required Packages: to be increased over the course
+options(contrasts=c("contr.treatment","contr.treatment"))
+
+
+```
+
+
+```{r}
+# Clear plots
+if(!is.null(dev.list())) dev.off()
+# Clean workspace
+rm(list=ls())
+
+
+```
+
+**The amount of calories per 100 grams is selected as the numeric target. In the past, a lognormal distribution was accepted as the reference distribution.**
+
+**1.	Determine whether serial correlation is present on dataset or not.**
+
+```{r}
+
+```
+
+**2.	Define a new variable containing the total amount of ingredients (water, protein, fat, ash and carbohydrates). Check consistency.**
+
+```{r}
+
+```
+
+**3.	Univariant severe outliers are also present in some variables. Determine them. **
+
+```{r}
+
+
+```
+
+**4.	Are there multivariant outliers? Find them. Try to explain their singularity. Multivariant outliers,if present, are not going to be treated in this exercise: keep them as suplementary observations in the rest of the exercise. Which is the cut-off at 99.9% CI?**
+
+```{r}
+
+```
+
+**5.	Indicate by using exploratory data analysis tools which are apparently the most associated variables with the numeric response variable (only the contributing variables to the ingredients are to be taken as active variables). Use also FactoMineR profiling tools at 99% significance level.**
+
+```{r}
+
+```
+
+**6.	Use brand target factor and determine the most rellevant global associations at 99% CI. Profile A and I brands.**
+
+```{r}
+
+```
+
+
+**7.	Say a few words about the hypothetical distribution that was assumed in the past. Use graphical and inferential arguments.**
+
+```{r}
+
+```
+
+**8.	Let us focus on cal variate dispersion behavior according to the brand. Use numeric, graphics and inferential tools to address the topic.**
+
+```{r}
+
+```
+
+**9.	Let us focus on cal variate mean behavior according to the brand. Use numeric, graphics and inferential tools to address whether the mean of the target depends on the brand or not.**
+
+```{r}
+
+```
+
+**10.	 Continuing with the former question, on the positive case which brands show a remarkable difference in mean behavior among them. Use one-sided tests.**
+
+```{r}
+
+```
+
+**11.	The standard deviation of the number of calories for brand A should not exceed 0.15cal. For the simple random sample in your dataset, calculate the deviation of calories for 100g assuming a normal distribution for 100 g calories. Stating any assumptions, you need (write them), test at the 1% level the null hypothesis that the population standard deviation is not larger than 0.15cal against the alternative that it is.**
+
+```{r}
+
+```
+
+
+**12.	Figure out the 99% upper threshold for the number of calories for brand A population variance. Normal distribution for calories is assumed to hold.**
+
+```{r}
+
+```
+
+**13. Build a 99% confidence interval for the difference in the mean of 100 g calories between brands A and C. Assume that equal variances in the population calories per brand does not hold.**
+
+```{r}
+
+```
+
+**14. Out of 100 people, 60 prefer A to C. Determine a 99% confidence interval for the population proportion that favors A in front of C. Test the null hypothesis that selecting A and C has equal probability.**
+
+```{r}
+
+```
+
+**15. A second survey considered 200 people, 110 prefer A to C. Determine a 99% confidence interval for the difference in the population proportion that favors A in front of C accounting the two surveys. Test the null hypothesis that selecting A brand has a lower probability in the second of the surveys.**
+
+```{r}
+
+```
+
+**Do not forget to Knit to .pdf before posting your answers in ATENEA. **

@@ -1,0 +1,575 @@
+---
+title: "LAB Session 4 - Anova-Ancova models"
+author: "Lídia Montero"
+date: '2021'
+output:
+  pdf_document: default
+  word_document: default
+editor_options:
+  chunk_output_type: console
+---
+
+This is an R Markdown document. 
+We are showing some examples of GLMz. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>. Use * to provide emphasis such as *italics* and **bold**.
+
+Create lists: Unordered * and +     or   ordered   1. 2.  
+
+  1. Item 1
+  2. Item 2
+    + Item 2a
+    + Item 2b
+
+# Header 1
+## Header 2
+
+# Load libraries and set current directory
+
+```{r}
+# Clear plots
+if(!is.null(dev.list())) dev.off()
+
+# Clean workspace
+rm(list=ls())
+
+setwd("D:/Docencia_UPC/MDS-SIM/2022-2023/Lab 4")
+
+library(car)
+library(FactoMineR)
+library(lmtest)
+library(effects)
+library(AER)
+```
+
+# Prestige
+
+First univariate descriptive analysis:
+
+```{r}
+# Prestige
+df<-Prestige
+
+# Numeric summary
+summary(df)
+
+# Graphics: fast
+plot(df[,1:4]) #Basic graphical relationships between data. See linearity. Where it makes sense to estimate linear regression models or not.
+plot(df[,c(4,1:3)]) #Change the order
+```
+
+# Define a new indicator factor for women over 50%
+
+```{r}
+df$f.femenin<-0
+df$f.femenin[df$women>50]<-1
+table(df$type)
+df$f.femenin
+table(df$f.femenin)
+
+# Dicotomic (two levels) variable must be treated as a factor
+df$f.femenin<-factor(df$f.femenin,labels=c("Fem.No","Fem.Yes"))
+summary(df) #Note the NA's we have in type
+```
+
+ 
+## Missing data treatment
+
+In case we have NA's, we must inpute them. imputeMCA must be used to inpute values along categorical variables (variable: type):
+
+```{r}
+library(missMDA)
+#type
+res.mca<-imputeMCA(df[,6:7])
+res.mca$completeObs #We can check that all of them have been imputed (no NA)
+df[,6:7]<-res.mca$completeObs #Assignation to the original dataset
+options(contrasts=c("contr.treatment","contr.treatment")) #Baseline reparametrization
+```
+
+
+# Normality Issues for target prestige  (to be omitted for Session 4)
+
+Do we have a normal distribution for Prestige?
+
+This is the same analysis which was performed at Session 1 (We will not repeat it now)
+
+```{r}
+hist(df$prestige,freq=F,breaks=10)
+m=mean(df$prestige);std=sd(df$prestige);m;std
+curve(dnorm(x,m,std),col="red",lwd=2,add=T)
+
+shapiro.test(df$prestige)  # Not necessary here: package lmtest has some additional normality tests
+library(lmtest)
+dwtest(prestige~type,data=df)
+
+```
+
+
+# Global Association among numeric variables  (to be omitted for Session 4)
+
+```{r}
+# Numeric insights
+cor(df[,c(4,1:3)],method="pearson") # Parametric
+cor(df[,c(4,1:3)],method="spearman") # Non Parametric
+
+# Graphics
+plot(df[,c(4,1:3)])
+
+# Inferential Tools
+
+cor.test(df$prestige,df$income,method="spearman")
+cor.test(df$prestige,df$income,method="spearman",data=df)
+```
+
+# Global Association Y~A (binary) and Y~C (polytomic)
+
+```{r}
+# Numeric
+with(df, tapply(prestige,type,summary)) # How Prestige index varies according to categories of type of profession
+# Graphics
+Boxplot(prestige~type,data=df, id=list(n=Inf,labels=row.names(df))) # It does not work
+Boxplot(prestige~type,data=df[!is.na(df$type),], id=list( n=Inf, labels = row.names(df[!is.na(df$type),] ) ) )
+
+# Numeric
+with(df, tapply(prestige,f.femenin,summary))
+# Graphics
+Boxplot(prestige~f.femenin,data=df, id=list(n=Inf,labels=row.names(df))) # It does work
+```
+
+Tests on means
+
+```{r}
+
+# Inferential tools
+
+oneway.test(prestige~type,data=df)  # Parametric
+kruskal.test(prestige~type,data=df) # Non Parametric
+# Here, we have a numeric variable and my explanatory variable has n factors (And it is categorical).
+
+
+# Inferential tools for a binary factor. Note the difference when my explanatory variable has n factors or just 2. Now: f.femenin has only two factors 
+
+t.test(prestige~f.femenin,data=df)  # Parametric
+wilcox.test(prestige~f.femenin,data=df, correct = TRUE, exact= FALSE) # Non Parametric
+# Normal approximation can be done for samples larger than n>50 (or n > 30). 
+
+
+# ?wilcox.test
+```
+
+Specific Association Tests on means Y~C (polytomic)
+
+Just in case we had paired data:
+
+```{r}
+
+# Inferential tools
+
+pairwise.t.test(df$prestige,df$type)  # Parametric
+pairwise.wilcox.test(df$prestige,df$type) # Non Parametric
+
+```
+
+Tests on variances for groups defined by a factor 
+
+```{r}
+
+# Inferential tools   C Polytomic factor
+
+bartlett.test(prestige~type,data=df)  # Parametric
+fligner.test(prestige~type,data=df) # Non Parametric
+
+# Inferential tools for a binary factor
+
+var.test(prestige~f.femenin,data=df)  # Parametric
+fligner.test(prestige~f.femenin,data=df) # Non Parametric
+bptest(prestige~f.femenin,data=df) # Breusch Pagan Test: popular in econometrics - Parametric Test
+# Test to analyze the heteroskedasticity in a linear regression model. 
+# H0: errors are homoskedastic (equal variance along them)
+```
+
+# Profiling and Feature Selection Tools in FactoMineR (to be omitted for Session 4)
+
+```{r}
+# library(FactoMineR)
+# 
+# ?condes
+res.con<-condes(df,4)
+str(res.con)
+names(res.con)
+res.con$quanti
+res.con$quali
+res.con$category
+# 
+# # Just to try: Let type be the response for example purposes
+names(df)
+res.cat<-catdes(df,num.var=6)
+names(res.cat)
+res.cat$test.chi2
+res.cat$category
+res.cat$quanti.var
+res.cat$quanti
+```
+
+# Multivariate Outlier detection (NAs should be avoided): only for numeric  variates  (to be omitted for Session 4)
+
+```{r}
+library(chemometrics)
+res.out<-Moutlier(df[,1:4],quantile=0.995)
+str(res.out)
+res.out
+llout<-which((res.out$md>res.out$cutoff)&(res.out$rd>res.out$cutoff)) #Both approaches are correct
+length(llout)
+```
+
+## ANOVA MODELS: 1 WAY
+
+First linear model estimation with one categorical explanatory variable: type
+
+```{r}
+# With baseline reparametrization:
+options(contrasts=c("contr.treatment","contr.treatment"))
+m0 <- lm( prestige ~ 1, data = df )
+summary(m0)
+m3 <- lm( prestige ~ type, data = df ) #Note what is the baseline category: type - bc (Not appearing). Effect of each of the categories over the baseline. Baseline effect = 0
+summary( m3 )
+# With Zero sum reparametrization
+options(contrasts=c("contr.sum","contr.sum"))
+m3s <- lm( prestige ~ type, data = df )
+# 
+# Sum-to-zero reparametrization: categorical variable as deviations from a grand mean. 
+summary( m3s )
+# 
+# 
+# # Is type useful?
+anova( m0, m3 ) # Is the reduction in the RSS significant
+# Should the variable type be included in the analysis? 
+```
+
+
+## ANOVA MODELS: 2 WAY
+
+Now, we are including 
+
+- Interactions between two categorical variables
+
+- If an interaction is included in the model, single effects of the variables included in the model must be also included. 
+
+```{r}
+options(contrasts=c("contr.treatment","contr.treatment")) #Getting back to the baseline reparametrization
+m0 <- lm( prestige ~ 1, data = df )
+m1 <- lm( prestige ~ type*f.femenin, data = df ) # If an interaction is included in the model, single effects must also be included in the model
+summary( m1 )
+m2 <- lm( prestige ~ type + f.femenin, data = df )
+summary( m2 )
+options(contrasts=c("contr.sum","contr.sum"))
+m1s <- lm( prestige ~ type*f.femenin, data = df ) #Note that single effects are automatically included in the model
+summary( m1s )
+m2s <- lm( prestige ~ type + f.femenin, data = df )
+summary( m2s )
+# Identify how the RSS reduces or changes from one model to the other.
+
+# Are interactions useful?
+anova( m2, m1 ) #Look for the p-value. It is higher than 0.05. 
+```
+
+
+## ANCOVA MODELS
+
+Ancova models imply the inclusion of intercations between factors and covariates as explanatory variables in the linear model (You can check the slide 36 in the pdf just to realize when these type of interactions happen):
+
+```{r}
+options(contrasts=c("contr.treatment","contr.treatment"))
+head(df)
+m1 <- lm( prestige ~., data=df[,c(1:4,6:7)])
+summary(m1)
+m2 <- step( m1 )
+summary(m2) # We can see that if there is at least one level of the category which is significant the factor is left in the model - coefficient associated to typewc not significantly different from 0
+m3s <- lm( prestige ~ education + income*type, data=df[,c(1:4,6:7)])
+summary(m3)
+m3 <- lm( prestige ~ (education + income )*type, data=df[,c(1:4,6:7)])
+summary(m3s)
+anova(m3,m3s)
+m4 <- step( m3 )
+summary(m4) #Same as before: one significant level makes that the factor is significant
+par(mfrow=c(2,2))
+plot(m4, id.n=0)
+par(mfrow=c(1,1))
+# 
+influencePlot( m4 ) #X-axis: A priori influential observations (detected with the leverage value)
+```
+
+# InsectSprays
+
+```{r}
+options(contrasts=c("contr.treatment","contr.treatment"))
+df<-read.table("InsectSprays.csv",header=T, sep=";" , dec=",")
+# The counts of insects in agricultural experimental units treated with different insecticides.
+attach(df)
+summary(df)
+df$spray <- factor(df$spray)
+Boxplot(count~spray,data=df)
+# The counts variable can not be normal so non parametric tests must be used
+kruskal.test(count~spray,data=df)
+fligner.test(count~spray,data=df)
+# 
+m10<-lm(count~spray,data=df)
+summary(m10)
+par(mfrow=c(2,2))
+plot(m10)
+```
+
+It seems that basic assumptions are not satisfied so we will need to apply a specific transformation to my target:
+
+```{r}
+par(mfrow=c(1,1))
+
+library(MASS)
+boxcox(I(count+0.5)~spray,data=df)
+```
+
+Sqrt: basic transformation to reduce the variance
+
+```{r}
+Boxplot(sqrt(count)~spray,data=df)
+fligner.test(sqrt(count)~spray,data=df) #Check that now we have homogeneity of variances (before, the null hypothesis was rejected)
+m0<-lm(sqrt(count)~1,data=df)
+m10<-lm(sqrt(count)~spray,data=df)
+summary(m10)
+
+anova( m0, m10 )
+```
+
+A,B, F are not different and have the same effect on my target. 
+
+```{r}
+par(mfrow=c(2,2))
+plot(m10) # It seems that things are better than before
+par(mfrow=c(1,1))
+
+# Does it make sense to include spray as a regressor?
+anova(m10)
+
+# Grand mean for count and mean in terms of the level of the spray:
+model.tables(m10aov<-aov(sqrt(count)~spray,data=df),type="mean")
+
+options(contrasts=c("contr.sum","contr.sum"))
+contrasts(df$spray) #This is the zero sum reparametrization parametrized
+m10s<-lm(sqrt(count)~spray,data=df)
+summary(m10s)
+
+# Our data is paired:
+pairwise.t.test(sqrt(count),spray,p.adj="bonferroni")
+# Used when we compute multiple tests. p-value*number of tests
+pairwise.t.test(sqrt(count),spray,p.adj="none")
+pairwise.t.test(sqrt(count),spray)
+TukeyHSD(m10aov)
+
+pairwise.wilcox.test(sqrt(count),spray,p.adj="bonferroni")
+pairwise.wilcox.test(sqrt(count),spray,p.adj="none")
+pairwise.wilcox.test(sqrt(count),spray)
+
+linearHypothesis(m10, c("sprayB=0","sprayF=0","sprayE-sprayD=0"))
+df$spray2<-df$spray
+levels(df$spray2)[c(1,2,6)]<-"A"
+levels(df$spray2)[c(4:5)]<-"D"
+
+m10a<-lm(sqrt(count)~spray2,data=df)
+summary(m10a)
+
+anova( m10a, m10 )
+AIC( m10a, m10 ) # Lower AIC, better the model it is
+```
+
+# BithWeight
+
+```{r}
+df<-read.table("BithWeight.csv",header=T, sep=";" , dec=",")
+# 
+summary(df)
+df$smoke=factor(df$smoke,labels=c("No","Yes"))
+df$race=factor(df$race,labels=c("white","afro","other"))
+with(df,interaction.plot(smoke,race,bwt))
+with(df,interaction.plot(race,smoke,bwt))
+# It seems that there is an interaction between these two variables
+attach(df)
+Boxplot(bwt~smoke)
+Boxplot(bwt~race, data=df)
+kruskal.test(bwt~race,data=df)
+kruskal.test(bwt~smoke,data=df)
+fligner.test(bwt~smoke,data=df)
+fligner.test(bwt~race,data=df)
+# 
+m15<-lm(bwt~race+smoke,data=df)
+summary(m15)
+m16<-lm(bwt~race*smoke,data=df)
+summary(m16)
+anova(m15,m16)
+Anova(m16)
+# 
+par(mfrow=c(2,2))
+plot(m15)
+par(mfrow=c(1,1))
+step(m16, k=log(nrow(df))) #BIC criteria has been used
+ 
+m15aov<-aov(bwt~race+smoke,data=df)
+model.tables(m15aov,type="mean")
+Anova(m15)
+# 
+influencePlot(m15,id=list(n=3,method="noteworthy"))
+df[131:133,]
+m16<-lm(bwt~race*smoke,data=df[-c(131:133),])
+```
+
+
+
+# Machines
+
+```{r}
+# Machines=read.csv2("machines.csv")
+# Machines$Worker=as.factor(Machines$Worker)
+# Machines$Machine=as.factor(Machines$Machine)
+# summary(Machines)
+# 
+# options(contrasts=c("contr.treatment","contr.treatment")) 
+# contrasts(Machines$Machine)
+# 
+# options(contrasts=c("contr.treatment","contr.poly")) 
+# oneway.test(score~Machine,Machines)
+# model.tables(aov(score~Machine,Machines),type="mean")
+# 
+# with(Machines,pairwise.t.test(score,Machine,p.adj="bonferroni"))
+# with(Machines,pairwise.t.test(score,Machine,p.adj="none"))
+# with(Machines,pairwise.t.test(score,Machine))
+# with(Machines,TukeyHSD(aov(score~Machine,Machines))) 
+# 
+# with(Machines,pairwise.wilcox.test(score,Machine))
+# 
+# mod=aov(score~Machine+Worker,Machines)
+# summary(mod)
+# 
+# model.tables(mod)
+# model.tables(mod,type="mean")
+# 
+# with(Machines,interaction.plot(Machine,Worker,score))
+# with(Machines,interaction.plot(Worker,Machine,score))
+# mod2=aov(score~Machine*Worker,Machines)
+# summary(mod2)
+# 
+# library(lmtest)
+# 
+# coeftest(mod2)
+# waldtest(mod2)
+# waldtest(mod,mod2)
+# anova(mod,mod2)
+# 
+# options("contrasts")
+# contr.treatment(Machines$Worker)
+# anova(mod,mod2)
+# par(mfrow=c(2,2))
+# plot(mod2,id.n=5)
+# par(mfrow=c(1,1))
+# 
+# mod3=aov(score~Machine+Error(Worker),Machines)
+# summary(mod3)
+# 
+# summary(mod.lm<-lm(score~Machine*Worker,Machines))
+# library(car)
+# Anova(mod.lm)
+# 
+# summary(mod.lm<-lm(score~Worker*Machine,Machines))
+```
+
+
+# Oftalmic
+
+```{r}
+# df<-read.csv2("Oftalmic.csv")
+# summary(df)
+# Boxplot(OI~Sex,data=df)
+# df$Sex<-factor(df$Sex,labels=c("Male","Female"))
+# 
+# bartlett.test(OI~Sex,data=df)
+# fligner.test(OI~Sex,data=df)
+# 
+# kruskal.test(OI~Sex,data=df)
+# oneway.test(OI~Sex,data=df)
+# 
+# library(car)
+# scatterplot(OI~age|Sex,data=df,smooth=F,id.n=101)
+# 
+# m3<-lm(OI~age,data=df)
+# par(mfrow=c(2,2))
+# plot(m3)
+# Boxplot(resid(m3)~Sex,data=df)
+# library(MASS)
+# boxcox(OI~age*Sex,data=df)
+# 
+# m5<-lm(log(OI)~age*Sex,data=df)
+# m4<-lm(log(OI)~age+Sex,data=df)
+# m3<-lm(log(OI)~age,data=df)
+# m2<-lm(log(OI)~Sex,data=df)
+# m1<-lm(log(OI)~1,data=df)
+# 
+# scatterplot(log(OI)~age|Sex,data=df,smooth=F)
+# # Gross effects
+# 
+# anova(m1,m2)
+# anova(m1,m3)
+# 
+# # Net effects
+# anova(m3,m4)
+# anova(m2,m4)
+# 
+# Anova(m4)
+# 
+# # Interactions
+# anova(m4,m5)
+# Anova(m5)
+# 
+# # Model Validation
+# par(mfrow=c(2,2))
+# plot(m5)
+# library(car)
+# marginalModelPlots(m5,id.n=5)
+# influencePlot(m5,id=list(n=5,method="noteworthy"))
+# residualPlots(m5,id=list(n=5,method=cooks.distance(m5)))
+# residualPlots(m5,terms=~1|Sex,id=list(n=5,method=cooks.distance(m5)))
+# llista<-Boxplot(rstudent(m5))
+# llista
+```
+
+```{r}
+# WWheat=read.csv2("WWheat.csv")
+# WWheat$Variety=as.factor(WWheat$Variety)
+#  
+# summary(WWheat)
+# scatterplot(Yield~Moisture*Variety,smooth=F,data=WWheat)
+# hist(WWheat$Yield,5)
+# m5<-lm(Yield~Moisture*Variety,data=WWheat)
+# m4<-lm(Yield~Moisture+Variety,data=WWheat)
+# m3<-lm(Yield~Moisture,data=WWheat)
+# m2<-lm(Yield~Variety,data=WWheat)
+# m1<-lm(Yield~1,data=WWheat)
+# 
+# anova(m2,m4)
+# anova(m3,m4)
+# anova(m4,m5)
+# Anova(m5)
+# summary(m5)
+# step(m5,k=log(nrow(WWheat)))
+# 
+# library(lmtest)
+# linearHypothesis(m5,c("Moisture:Variety4-Moisture:Variety5=0","Moisture:Variety6-Moisture:Variety7=0","Moisture:Variety8-Moisture:Variety9=0"))
+# 
+# WWheat$Variety2<-WWheat$Variety
+# levels(WWheat$Variety)
+# levels(WWheat$Variety2)[c(5)]<-"4"
+# levels(WWheat$Variety2)[c(9)]<-"8"
+# levels(WWheat$Variety2)[c(7)]<-"6"
+# m5a<-lm(Yield~Moisture*Variety2,data=WWheat)
+# anova(m5a,m5)
+
+```
+
+
+
+

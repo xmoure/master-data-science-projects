@@ -1,0 +1,236 @@
+---
+title: "Simple Linear Regression_lab - Pre"
+author: "Lídia Montero & Josep Franquet"
+date: "2021"
+output: word_document
+editor_options: 
+  chunk_output_type: console
+---
+
+This is an R Markdown document. 
+We are showing some examples of GLMz. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>. Use * to provide emphasis such as *italics* and **bold**.
+
+Create lists: Unordered * and +     or   ordered   1. 2.  
+
+  1. Item 1
+  2. Item 2
+    + Item 2a
+    + Item 2b
+
+# Header 1
+## Header 2
+
+# Load Data 
+
+```{r}
+# Clear plots
+if(!is.null(dev.list())) dev.off()
+
+# Clean workspace
+rm(list=ls())
+
+setwd("D:/Docencia_UPC/MDS-SIM/2022-2023/Lab 2")
+load("Anscombe73raw.RData")
+
+ls()
+anscombe
+
+attach(anscombe)
+summary(anscombe)
+
+```
+
+You can find more details of the Anscombe's dataset using the following URL:
+
+[URL](https://en.wikipedia.org/wiki/Anscombe%27s_quartet)
+
+
+## Set A
+
+```{r}
+# Set A
+par(mfrow=c(1,1))
+plot(XA,YA,pch=19)
+ma<-lm(YA~XA,data=anscombe)
+ls()
+summary(ma)
+
+# Default residual analysis:
+par(mfrow=c(2,2))
+plot(ma)
+
+# Metrics related to residuals:
+library(car)
+par(mfrow=c(1,1))
+residualPlot(ma)
+rstan <- rstandard(ma) #Standardized residuals
+rstud <- rstudent(ma) #Studentized residuals
+dcook <- cooks.distance(ma) #Cook distance
+dcook
+leverage <- hatvalues (ma) #Leverage of observations
+leverage #This is used to assess whether there can be a priori influential observations 
+
+plot(ma$fitted.values, rstan) #Standardized residuals vs fitted values
+plot(ma$fitted.values, rstud) #Studentized residuals vs fitted values
+
+marginalModelPlots(ma)
+
+crPlot(ma, "XA") #Partial regression between XA and YA
+# Used to check linearity between regressor and response
+
+dfbetas(ma) #Beta coefficients without observation i
+# This is the effect of extracting out the observation i from the estimation
+
+# Detection of influential data:
+matplot(dfbetas(ma), type="l", col=3:4,lwd=2)
+lines(sqrt(cooks.distance(ma)),col=1,lwd=3)
+# See the slides for more details of these limits
+abline(h=2/sqrt(dim(anscombe)[1]), lty=3,lwd=1,col=5)
+abline(h=-2/sqrt(dim(anscombe)[1]), lty=3,lwd=1,col=5)
+abline(h=sqrt(4/(dim(anscombe)[1]-length(names(coef(ma))))), lty=3,lwd=1,col=6)
+# llegenda<-c("Cook d", names(coef(ma)), "DFBETA Cut-off", "Ch-H Cut-off")
+# legend(locator(n=1), legend=llegenda, col=1:length(llegenda), # lty=c(1,2,2,2,3,3), lwd=c(3,2,2,2,1,1))
+
+# Dffits: another metric for influential data:
+par(mfrow=c(1,1))
+dffits(ma)
+plot(dffits(ma),type="l",lwd=3)
+pp=length(names(coef(ma)))
+lines(sqrt(cooks.distance(ma)),col=3,lwd=2)
+abline(h=2*(sqrt(pp/(nrow(ma)-pp))),lty=3,lwd=1,col=2)
+abline(h=-2*(sqrt(pp/(nrow(ma)-pp))),lty=3,lwd=1,col=2)
+# llegenda<-c("DFFITS","DFFITS Cut-off","Cooks D")
+# legend(locator(n=1),legend=llegenda,col=1:3,lty=c(1,3,1),lwd=c(3,1,2))
+
+# AIC and BIC:
+AIC(ma) 
+AIC(ma, k=log(nrow(anscombe))) #BIC calculation
+
+#Stepwise regression:
+ma_0 <- lm(YA ~ 1, anscombe)
+step(ma_0, ~XA, direction="forward",data=anscombe) #XA is the candidate variable to be added
+```
+
+
+```{r}
+# Set B
+par(mfrow=c(1,1))
+plot(XB,YB,pch=19,col="red")
+mb<-lm(YB~XB,data=anscombe)
+lines(XB,fitted(mb),col="red")
+ls()
+summary(mb)
+
+par(mfrow=c(2,2))
+plot(mb) #Note the strange fits of the plots
+par(mfrow=c(1,1))
+residualPlot(mb)
+rstan_b <- rstandard(mb) #Standardized residuals
+rstud_b <- rstudent(mb) #Studentized residuals
+plot(mb$fitted.values, rstan_b) #Standardized residuals vs fitted values
+plot(mb$fitted.values, rstud_b) #Studentized residuals vs fitted values
+marginalModelPlots(mb)
+
+crPlot(mb, "XB") #Partial regression between XB and YB
+# Used to check linearity between regressor and response
+
+mbb<-lm(YB~XB+I(XB^2),data=anscombe)
+summary(mbb)
+rstan_b_2 <- rstandard(mbb) #Standardized residuals
+rstud_b_2 <- rstudent(mbb) #Studentized residuals
+plot(mbb$fitted.values, rstan_b_2) #Standardized residuals vs fitted values
+plot(mbb$fitted.values, rstud_b_2) #Studentized residuals vs fitted values
+
+plot(YB~XB,pch=19,col="red")
+q <- seq(3, 10, 0.01)
+y <- -5.9957343 + 2.7808392*q -0.1267133*q^2
+plot(q,y,type='l',col='navy', lwd=3)
+points(YB~XB, col = "red", pch = 19)
+```
+
+
+```{r}
+# Set C
+par(mfrow=c(1,1))
+plot(XC,YC,pch=19,col="darkgreen") #It can be noted that something is happening with observation 3
+text(XC,YC,label=row.names(anscombe),col="darkgreen",adj=1.5)
+mc<-lm(YC~XC,data=anscombe)
+lines(XC,fitted(mc),col="darkgreen")
+ls()
+summary(mc)
+
+par(mfrow=c(2,2))
+plot(mc)
+
+library(car)
+Boxplot(resid(mc),col="darkgreen")
+cooks.distance(mc)
+Boxplot(cooks.distance(mc),col="darkgreen")
+
+residualPlot(mc)
+rstan <- rstandard(mc) #Standardized residuals
+rstud <- rstudent(mc) #Studentized residuals
+dcook <- cooks.distance(mc) #Cook distance
+dcook
+leverage <- hatvalues (mc) #Leverage of observations
+leverage #Note: leverage of observation 6 > leverage of observation 3
+
+plot(mc$fitted.values, rstan) #Standardized residuals vs fitted values
+plot(mc$fitted.values, rstud) #Studentized residuals vs fitted values
+
+dfbetas(mc) #Beta coefficients without observation i
+
+mcc<-lm(YC~XC,data=anscombe[-3,])
+summary(mcc)
+```
+
+
+```{r}
+# Set D
+par(mfrow=c(1,1))
+plot(XD,YD,pch=19,col="blue")
+text(XD,YD,label=row.names(anscombe),col="blue",adj=1.5)
+md<-lm(YD~XD,data=anscombe)
+summary(md)
+lines(XD,fitted(md),col="blue")
+ls()
+summary(md)
+
+par(mfrow=c(2,2))
+plot(md)
+
+resid(md)
+cooks.distance(md)
+hatvalues(md) #Leverage of the observation 8: 1
+
+# Better approximation:
+mdd<-lm(YD~XD,data=anscombe[-8,])
+summary(mdd)
+mean(YD[-8])
+```
+
+All in all
+
+```{r}
+### Prospecció dels jocs de dades A,B,C,D
+par(mfrow=c(2,2))
+anscombe.lmA <- lm(anscombe$YA ~ anscombe$XA, data=anscombe)
+plot(anscombe$XA, anscombe$YA,pch=19,col=1)
+lines(anscombe$XA,anscombe.lmA$fitted.values, col=1, lty=3,lwd=2)
+text(x=anscombe$XA,y=anscombe$YA,labels=row.names(anscombe),adj=1.1, col=1)
+
+anscombe.lmB <- lm(anscombe$YB ~ anscombe$XB, data=anscombe)
+plot(anscombe$XB, anscombe$YB,pch=19,col=2)
+lines(anscombe$XB,anscombe.lmB$fitted.values, col=2, lty=3,lwd=2)
+text(x=anscombe$XB,y=anscombe$YB,labels=row.names(anscombe),adj=1.1, col=2)
+
+anscombe.lmC <- lm(anscombe$YC ~ anscombe$XC, data=anscombe)
+plot(anscombe$XC, anscombe$YC,pch=19,col=3)
+lines(anscombe$XC,anscombe.lmC$fitted.values, col=3, lty=3,lwd=2)
+text(x=anscombe$XC,y=anscombe$YC,labels=row.names(anscombe),adj=1.1, col=3)
+
+anscombe.lmD <- lm(anscombe$YD ~ anscombe$XD, data=anscombe)
+plot(anscombe$XD, anscombe$YD,pch=19,col=4)
+lines(anscombe$XD,anscombe.lmD$fitted.values, col=4, lty=3,lwd=2)
+text(x=anscombe$XD,y=anscombe$YD,labels=row.names(anscombe),adj=1.1, col=4)
+```

@@ -1,0 +1,194 @@
+---
+title: "LabSession_6"
+author: "Lidia"
+date: "Monday, November 21st, 2022"
+output: word_document
+editor_options: 
+  chunk_output_type: console
+---
+
+## Prepare Dataset and load packages
+```{r}
+# Clear plots
+if(!is.null(dev.list())) dev.off()
+
+# Clean workspace
+rm(list=ls())
+
+load("Elections_92.RData")
+options(contrasts=c("contr.treatment","contr.treatment"))
+library(car)
+library(MASS)
+library(AER)
+library(effects)
+library(lmtest)
+library(FactoMineR)
+library(DescTools)
+library(ResourceSelection)
+library(statmod)
+library(cvAUC)
+```
+
+
+## Party Preferences
+
+```{r}
+elecc92$party <- as.factor(paste(elecc92$p,elecc92$arty))
+summary(as.factor(c(elecc92$p,elecc92$arty)))
+summary(elecc92)
+m7<- glm(pres ~ poly(age,2)*c.edu+party, family=binomial, data=elecc92)
+summary(m7)
+
+# Grouping levels
+plot(vote~party,data=elecc92)
+partit <- rep("weak",length(elecc92$party))
+partit[elecc92$party=="strong rep"|elecc92$party=="strong dem"] <- "strong"
+partit[elecc92$party=="ind ind"] <- "ind"
+partit <-ordered(partit,levels=c("ind","weak","strong"))
+newparty <-partit
+elecc92 <- data.frame(elecc92,newparty)
+```
+
+## Point 14 - Split data into work and test
+
+```{r}
+set.seed(1234)
+llwork <- sample(1:nrow(elecc92),round(0.8*nrow(elecc92),dig=0))
+dfwork <- elecc92[llwork,]
+dftest <- elecc92[-llwork,]
+
+m14<- glm(pres ~ (poly(age, 2) * c.edu + newparty)*(inter+close+sat), family=binomial, data=dfwork)
+m15 <- step(m14, k=log(nrow(dfwork)))
+m16 <- step(m14)
+Anova(m15, test="LR")
+Anova(m16, test="LR")
+
+anova(m15, m16, test="Chisq")
+summary(m15)
+
+# Diagnostics
+
+marginalModelPlots(m15,id=list(labels=row.names(elecc92),method=abs(cooks.distance(m15)), n=5) )
+
+avPlots(m15,id=list(labels=row.names(elecc92),method=abs(cooks.distance(m15)), n=5) )
+
+crPlots(m15,id=list(labels=row.names(elecc92),method=abs(cooks.distance(m15)), n=5) )
+
+residualPlots(m15, layout=c(3, 2))
+outlierTest(m15)
+llnrem<-influencePlot(m15,id=list(n=3) );llnrem
+
+# matplot(dfbetas(m15),type='l')
+# abline(h=sqrt(4/(dim(elecc92)[1])),lty=3,col=6)
+# abline(h=-sqrt(4/(dim(elecc92)[1])),lty=3,col=6)
+# lines(sqrt(cooks.distance(m15)),lwd=3,col=1)
+# legend(locator(n=1),legend=c(names(as.data.frame(dfbetas(m15))),"Cook D"), col=c(1:3,1), lty=c(3,3,3,1) )
+
+llistal<-Boxplot(hatvalues(m15), id.n=10)
+abline(h=4*length(coef(m15))/nrow(dfwork))
+hatvalues(m15)[llistal]
+
+llistac<-Boxplot(cooks.distance(m15), id=list(labels=rownames(dfwork)))
+cooks.distance(m15)[llistac]
+elecc92[llistac,]
+llrem <- which( rownames(dfwork) %in% c("913","951"));llrem
+
+dfwork <- dfwork[-llrem,]
+m15<- glm(pres ~ poly(age, 2) + c.edu + newparty+inter, family=binomial, data=dfwork )
+```
+
+# Point 15: Forecasting capability of the final model
+
+```{r}
+elecc92.fin <- m15
+prob.vot <- elecc92.fin$fit
+pres.est <- ifelse(prob.vot<0.5,0,1)
+tt <- table(pres.est,dfwork$pres)
+sum(diag(table(pres.est,dfwork$pres)))/(dim(dfwork)[1])
+precision <- tt[2,2]/(tt[2,2] +tt[2,1] );precision
+recall <- tt[2,2]/(tt[2,2] +tt[1,2] );recall
+f1 <-2*((precision*recall)/(precision+recall)); f1
+
+# Model na?ve
+m0<-glm(pres ~ 1, family=binomial, data=dfwork)
+prob.vot0 <- m0$fit
+pres.est0 <- ifelse(prob.vot0<0.5,0,1)
+tt0 <- table(pres.est0,dfwork$pres)
+tt0
+table(pres.est0,dfwork$pres)[1,2]/(dim(dfwork)[1])
+precision0 <- tt0[1,2]/(tt0[1,2] +tt0[1,1] );precision0
+recall0 <- tt0[1,2]/(tt0[1,2] +0 );recall0
+f10 <-2*((precision0*recall0)/(precision0+recall0)); f10
+
+library(rms)
+model.final <- lrm(pres ~ poly(age, 2) + c.edu + newparty + inter,  data=dfwork)
+model.final
+
+library(fmsb)
+NagelkerkeR2(m15)
+summary(m15)
+100*(1-m15$dev/m15$null.dev)
+
+library(DescTools)
+PseudoR2(elecc92.fin, which='all') # Not working for grouped data
+# Sheather
+1 - (elecc92.fin$deviance / elecc92.fin$null.deviance)
+# McFadden
+1-(as.numeric(logLik(elecc92.fin))/as.numeric(logLik(m0)))
+
+library(ResourceSelection)
+hoslem.test(dfwork$pres, fitted(elecc92.fin))
+
+# Estadístic de Hosmer-Lemershow
+# seque<-c(seq(0,1,by=0.1));seque  # Original proposal
+seque<-quantile(fitted(m15),probs=seq(0,1,by=0.1))
+fitgrup<-cut(fitted(m15),breaks=seque)
+cfitgrup<-table(dfwork$pres,fitgrup);cfitgrup
+cmodel1<-tapply(fitted(m15),fitgrup,sum);cmodel1
+cmodel0<-tapply(1-fitted(m15),fitgrup,sum);cmodel0
+cmodelgrup <- rbind(cmodel0,cmodel1);cmodelgrup
+XHL<-sum(((cfitgrup-cmodelgrup)^2)/cmodelgrup);XHL
+dfXHL<-8
+1-pchisq(XHL,dfXHL)
+
+library("ROCR")
+dadesroc<-prediction(predict(m15,type="response"),dfwork$pres)
+par(mfrow=c(1,2))
+plot(performance(dadesroc,"err"))
+plot(performance(dadesroc,"tpr","fpr"))
+abline(0,1,lty=2)
+
+library(cvAUC)
+AUC(predict(m15,type="response"),dfwork$pres)
+
+```
+
+# Point 15: Forecasting capability of the final model. Test sample
+
+```{r}
+# It assumes sample split into dfwork and dftest
+# Definition of new party
+dftest$party <- as.factor(paste(dftest$p,dftest$arty))
+summary(as.factor(c(dftest$p,dftest$arty)))
+# Grouping levels
+partit <- rep("weak",length(dftest$party))
+partit[dftest$party=="strong rep"|dftest$party=="strong dem"] <- "strong"
+partit[dftest$party=="ind ind"] <- "ind"
+newparty <-factor(partit,levels=c("ind","weak","strong"))
+dftest <- data.frame(dftest,newparty)
+
+elecc92.fin <- m15
+prob.vot <- predict(elecc92.fin, newdata=dftest, type="response")
+pres.est <- ifelse(prob.vot<0.5,0,1)
+table(pres.est,dftest$pres)
+sum(diag(table(pres.est,dftest$pres)))/dim(dftest)[1]
+# Model na?ve
+m0<-glm(pres ~ 1, family=binomial, data=dftest)
+prob.vot0 <- m0$fit
+pres.est0 <- ifelse(prob.vot0<0.5,0,1)
+table(pres.est0,dftest$pres)
+table(pres.est0,dftest$pres)[1,2]/dim(dftest)[1]
+
+library(ResourceSelection)
+hoslem.test(dftest$pres, prob.vot)
+```

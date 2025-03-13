@@ -1,0 +1,328 @@
+---
+title: "LabSession_5"
+author: "Lidia"
+date: \today
+output: word_document
+editor_options: 
+  chunk_output_type: console
+---
+
+# Prepare Dataset and load packages
+```{r}
+setwd("C:/Users/lmontero/Dropbox/DOCENCIA/FIB-SIM/2021-22/LABORATORY/Practice5")
+options(contrasts=c("contr.treatment","contr.treatment"))
+library(car)
+library(MASS)
+library(AER)
+library(effects)
+library(lmtest)
+library(FactoMineR)
+
+# Clear plots
+if(!is.null(dev.list())) dev.off()
+
+# Clean workspace
+rm(list=ls())
+
+```
+
+# 01-Participation as labour force
+
+```{r}
+data(SwissLabor)
+df <- SwissLabor
+summary(df)
+df$participation <- factor(df$participation, labels=c("Par.No","Par.Yes"))
+df$foreign <- factor(df$foreign, labels=c("Foreign.No","Foreign.Yes"))
+
+# Y - Participation  A - Foreign Binary Outcome
+
+m0 <- glm( participation ~ 1, family="binomial", data = df)
+ptt<-prop.table(table(df$participation));ptt
+summary(m0)
+oddm0<-ptt[2]/ptt[1];oddm0
+logoddm0 <- log( oddm0 ); logoddm0  # Check the meaning of intercept estimate: logodd of the participation probability
+
+# Y ~ A  -> linear predictor cnt + alpha_j j=1,2=Foreign.no, Foreign.yes alpha_1=0
+m1 <- glm( participation ~ foreign, family="binomial", data = df)
+ptt1<-prop.table(table(df$foreign,df$participation),1); ptt1
+summary(m1)
+oddm1<-ptt1[,2]/ptt1[,1];oddm1
+logoddm1 <- log( oddm1 ); logoddm1  # Check the meaning of intercept estimate: logodd of the participation probability for Foreign.NO (Ref group) and dummy estimate for Foreign.No Foreign.Yes 
+ # -0.4591178   0.7563261 
+logoddm1[2]-logoddm1[1]
+
+# Deviance test: Nested models m0 is nested into m1
+anova( m0, m1, test="Chisq") # Deviance pvalue < 0.05 -> Reject H0
+
+# Participation modelling
+# 
+m2 <- glm( participation ~ ., family="binomial", data = df)
+vif(m2)
+m3 <- step( m2)
+m3 <- step( m2, k= log(nrow(df)))
+
+m4 <- glm( participation ~ (income + age + youngkids)*foreign, family="binomial", data = df)
+Anova( m4, test="LR")
+anova(m3,m4,test="Chisq")
+marginalModelPlots(m3)
+waldtest(m3,m4,test="Chisq")
+AIC( m3,m4 )
+
+m5 <- glm( participation ~ (income + poly(age,2) + youngkids)*foreign, family="binomial", data = df)
+summary( m5 )
+m6 <- step( m5, k= log(nrow(df)))
+avPlots(m6)
+marginalModelPlots( m6 )
+df[c("311"),]
+influencePlot(m6)
+Anova( m6, test="LR")
+
+plot(allEffects(m6))
+
+# H0: Model fits quite well data - Grouped data -> deviance(model) ~ Chisq(model$deviance, model$df)
+# 
+1-pchisq(m6$deviance, m6$df.residual) # Assymptotic theory does not hold
+# Rule of thumb 1027.7  >> 866 No good
+summary(m6)
+
+```
+
+
+# 02-accidents
+
+```{r}
+# Clear plots
+if(!is.null(dev.list())) dev.off()
+
+# Clean workspace
+rm(list=ls())
+
+load("02-Accidents.RData")
+acc2<-acc
+summary(acc2)
+
+prob<-sum(acc2$Severity.Severe)/(sum(acc2$Severity.Severe)+sum(acc2$Severity.Mild));prob
+oddprob<-prob/(1-prob);oddprob
+oddprob<-sum(acc2$Severity.Severe)/sum(acc2$Severity.Mild);oddprob
+log(oddprob)
+
+m0<-glm(cbind(Severity.Severe,Severity.Mild)~1,family=binomial,data=acc2)
+summary(m0)
+
+m0p<-glm(cbind(Severity.Severe,Severity.Mild)~1,family=binomial(link="probit"),data=acc2)
+summary(m0p)
+qnorm(prob)
+
+m1<-glm(cbind(Severity.Severe,Severity.Mild)~TimeDay,family=binomial(link="logit"),data=acc2)
+summary(m1)
+# Interpreting estimates in logodd, odd and probability scales
+coef(m1)[2]
+exp(coef(m1)[2])
+(exp(coef(m1)[2])-1)*100
+0.5*(1-0.5)*(coef(m1)[2])
+
+
+m2<-glm(cbind(Severity.Severe,Severity.Mild)~Weather,family=binomial(link="logit"),data=acc2)
+summary(m2)
+exp(coef(m2)[2])
+(1-exp(coef(m2)[2]))*100
+
+m3<-glm(cbind(Severity.Severe,Severity.Mild)~TimeDay+Weather,family=binomial(link="logit"),data=acc2)
+summary(m3)
+
+m4<-glm(cbind(Severity.Severe,Severity.Mild)~TimeDay*Weather,family=binomial(link="logit"),data=acc2)
+summary(m4)
+
+peam3<-sum(resid(m3,"pearson")^2);peam3
+
+# Goodness of fit: H0 model fits well provided grouped data
+1-pchisq( peam3, m3$df.residual )
+1-pchisq( m3$deviance, m3$df.residual )
+
+Anova(m4, test="LR")
+anova(m3,m4,test="Chisq")
+waldtest(m3,m4,test="Chisq")
+
+acc2$m<-acc2$Severity.Mild+acc2$Severity.Severe
+acc2$predpos<-acc2$m*predict(m3,type="response")
+acc2$predneg<-acc2$m*(1-predict(m3,type="response"))
+predict(m3,type="response")
+acc2
+
+```
+
+# 03-accidents (Agresti, 2002)
+
+```{r}
+options(contrasts=c("contr.treatment","contr.treatment"))
+# Clear plots
+if(!is.null(dev.list())) dev.off()
+
+# Clean workspace
+rm(list=ls())
+
+load("03-Accidents3.RData")
+summary(acc3)
+
+head(acc3)
+summary(acc3)
+m0<-glm(y.bin~1,family=binomial,data=acc3,weight=y)
+
+# df<-agregacio(acc3,3,as.formula(y~gender+environment+seatbelt),as.formula(target~gender+environment+seatbelt))
+df
+m0dis <- glm( cbind(ypos, yneg) ~ 1, family=binomial, data = df)
+
+madd <- glm( cbind(ypos, yneg) ~ gender + environment + seatbelt, family=binomial, data = df)
+
+mi2 <- glm( cbind(ypos, yneg) ~ (gender + environment + seatbelt)^2, family=binomial, data = df)
+
+mi2.1 <- glm( cbind(ypos, yneg) ~ gender + environment* seatbelt, family=binomial, data = df)
+
+Anova( mi2, test="LR")
+anova( madd, mi2,  test="Chisq")
+waldtest( madd, mi2,  test="Chisq")
+
+Anova( mi2.1, test="LR")
+anova( madd, mi2.1,  test="Chisq")
+waldtest( madd, mi2.1,  test="Chisq")
+AIC(madd,mi2,mi2.1)
+plot(allEffects(mi2.1))
+
+# Model Interpretation
+coef(mi2.1)
+exp(coef(mi2.1))
+prob <- sum(df$ypos)/sum(df$m);prob
+# Female factor
+# Log-odd scale interpretation: being female decreases by 0.55 unit positive outcome logit probability with respect to the base-line group Male. All else being equal (ceteris paribus)
+# Odd scale interpretation: positive outcome odds when being female are 0.58 times positive outcome odds for the reference level Male all else sbeing equal (ceteris paribus). Or alternatively, positive outcome odds when being female are 100(1-0.58)=42% lower compared to those for the base-line group Male (all else being equal).
+# Approximate probability scale interpretation: Being Female decreases absolute positive outcome probability by 0.091(0.091)(0.5459382)=0.045 units with respect to the base-line Male group all else being equal.
+prob*(1-prob)*coef(mi2.1)[2]
+
+#Interpretion of environment depends on seatbelt use
+# Using seatbelt (Ref. level)
+# logit scale: Urban accidents decrease by 0.694 units positive outcome logit probability with respect to the base-line group Rural Env. All else being equal (ceteris paribus)
+# Odd scale interpretation: positive outcome odds when urban accidents are 0.5 times positive outcome odds for the reference level Rural Env. all else being equal (ceteris paribus). Or alternatively, positive outcome odds for Urban Env are 100(1-0.5)=50% lower compared to those for the base-line group Rural Env (all else being equal).
+# Approximate probability scale interpretation: Being a Urban accident decreases absolute positive outcome probability by 0.091(1-0.091)(0.6936007)=0.057 units with respect to the base-line Rural Env. group all else being equal.
+prob*(1-prob)*coef(mi2.1)[3]
+
+# Not Using seatbelt
+# logit scale: Urban accidents decrease by 0.694+0.108=0.802 units positive outcome logit probability with respect to the base-line group Rural Env. All else being equal (Gender) (ceteris paribus)
+# Odd scale interpretation: positive outcome odds when urban accidents are exp(-0.802)=0.45 times positive outcome odds for the reference level Rural Env. within the same gender group. Or alternatively, positive outcome odds for Urban Env are 100(1-0.45)=55% lower compared to those for the base-line group Rural Env (all else being equal, in this case Gender).
+# Approximate probability scale interpretation: Being a Urban accident decreases absolute positive outcome probability by 0.091(1-0.091)(0.802)=0.066 units with respect to the base-line Rural Env. group in any gender level.
+# 
+# Try to interpret seatbelt factor yourself: ask any doubt
+
+m1dis <-glm( cbind(ypos, yneg) ~  seatbelt, family=binomial, data = df)
+anova(m0dis,m1dis, test="Chisq")
+sum(resid(m0dis,"pearson")^2)
+sum(resid(m0dis,"deviance")^2)
+sum(resid(m1dis,"pearson")^2)
+sum(resid(m1dis,"deviance")^2)
+
+m0dis$deviance
+m1dis$deviance
+anova(m0dis,m1dis, test="Chisq")
+```
+
+
+```{r}
+# Continue the exercise considering 1 factor seatbelt
+dfbelt<-agregacio(acc3,1,as.formula(y~seatbelt),as.formula(target~seatbelt))
+dfbelt
+
+prob <- sum(dfbelt$ypos)/sum(dfbelt$m);prob
+dfbelt$ypos0<-dfbelt$m*prob
+dfbelt$yneg0<-dfbelt$m*(1-prob)
+dfbelt
+
+Xp0 <- (dfbelt$m*((dfbelt$ypos-dfbelt$ypos0)^2))/(dfbelt$ypos0*(dfbelt$yneg0));Xp0
+sum(Xp0)
+
+# Null H0: Null model is consistent to data
+1-pchisq(sum(Xp0),1)
+
+Dev0<-2*(dfbelt$ypos*log(dfbelt$ypos/dfbelt$ypos0)+dfbelt$yneg*log(dfbelt$yneg/dfbelt$yneg0));Dev0
+sum(Dev0)
+# Null H0: Null model is consistent to data
+1-pchisq(sum(Dev0),1)
+
+odds<-dfbelt$ypos/dfbelt$yneg;odds
+
+m0<-glm(cbind(ypos,yneg)~1, family=binomial, data=dfbelt)
+summary(m0)
+prob <- sum(dfbelt$ypos)/sum(dfbelt$m);prob
+odd <- sum(dfbelt$ypos)/sum(dfbelt$yneg);odd
+logodd <- log(odd);logodd
+
+m0$deviance  # Check m0dis$dev
+sum(resid(m0,"pearson")^2) # Check m0dis value
+sum(resid(m0,"deviance")^2)# Check m0dis value
+
+# H0: m0 fits data (goodness of fit test for m0)
+1-pchisq(m0$dev,m0$df.residual)
+
+m0p<-glm(cbind(ypos,yneg)~1, family=binomial(link="probit"), data=dfbelt)
+summary(m0p)
+m0p$deviance
+summary(m0p)
+
+qnorm(prob)
+
+# Models Y - A
+
+m1 <- glm(cbind(ypos,yneg)~seatbelt, family=binomial, data=dfbelt)
+summary(m1)
+m1$deviance
+
+prob <- (dfbelt$ypos)/(dfbelt$m);prob
+odd <- (dfbelt$ypos)/(dfbelt$yneg);odd
+logodd <- log(odd);logodd
+logodd[2]-logodd[1]
+
+m1p <- glm(cbind(ypos,yneg)~seatbelt, family=binomial(link="probit"), data=dfbelt)
+summary(m1p)
+m1p$deviance
+qnorm(prob)
+qnorm(prob)[2] - qnorm(prob)[1]
+
+# Residual deviance for grouped/ungrouped data is not the same, model estimates are
+m0dis$deviance - m1dis$deviance
+m0$deviance - m1$deviance
+```
+
+Data Aggregation
+
+```{r}
+# Codi de la rutina
+# Milloro la manera de crear un dataframe agregat:
+agregacio <- function(dfin,nve,formula1, formula2)
+{
+# Exemple crida: dfage <- agregacio(elecc92,1,as.formula(uns~age),as.formula(pres~age))
+# Retorna dataframe: dfage amb age, m, ypos, yneg. 
+#
+# Formula1 ha de ser uns~var1+...+var_nve
+# Formula2 ha de ser resposta~var1+...+var_nve.Resposta ha de ser num?rica.
+# Requereix que dfin,data.frame d'entrada contingui una columna amb uns
+# Retorna: dfout, data.frame amb var1 , ..., var_nve, m, ypos, yneg.
+# Vàlid per nve arbitrari > 0
+
+taulam <- xtabs(formula1,exclude=NULL,dfin,drop.unused.levels=TRUE);
+taulap <- xtabs(formula2,exclude=NULL,dfin,drop.unused.levels=TRUE);
+
+dfout <- as.data.frame(taulam);
+dfaux<- as.data.frame(taulap);
+
+names(dfout)[nve+1] <- "m";
+names(dfaux)[nve+1] <- "ypos";
+attach(dfaux);
+dfout <- data.frame( dfout, ypos );
+dfout$yneg <- dfout$m-dfout$ypos;
+attach(dfout);
+dfout <- dfout[m>0,]
+# 
+# Les var.explicatives covariables ara surten com factor: canviar-ho
+# 	dfout$var_i <- as.numeric(levels(var_i))[var_i]
+}
+```
+

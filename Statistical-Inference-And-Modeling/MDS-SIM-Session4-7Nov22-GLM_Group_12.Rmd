@@ -1,0 +1,187 @@
+---
+title: "LAB Session 4 - Project Exercise"
+author: "Lídia Montero"
+date: "Nov 7th, 2022"
+output: word_document
+editor_options: 
+  chunk_output_type: console
+---
+
+This is an R Markdown document. 
+We are showing some examples of GLMz. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>. Use * to provide emphasis such as *italics* and **bold**.
+
+Create lists: Unordered * and +     or   ordered   1. 2.  
+
+  1. Item 1
+  2. Item 2
+    + Item 2a
+    + Item 2b
+
+# Header 1
+## Header 2
+
+# Load libraries and set current directory
+
+```{r}
+# Clear plots
+if(!is.null(dev.list())) dev.off()
+
+# Clean workspace
+rm(list=ls())
+library(car)
+library(FactoMineR)
+library(lmtest)
+library(effects)
+library(AER)
+```
+
+# CPS1985
+
+Data preparation and exploratory data analysis is not addressed in the laboratory session to enhance a detailed discussion about general linear models.
+
+```{r}
+library(AER)
+data("CPS1985")
+df <- CPS1985
+# df <- df[-444,]
+summary(df)
+cor(df[,1:4])
+
+m0 <- lm( wage~education+experience+age, data=df)
+summary(m0)
+?vif
+vif(m0) #Extremely high vif
+
+
+library(MASS)
+#We should apply a transformation on the target:
+boxcox(wage~education+experience, data = df) #lambda=0, log transformation
+#And transformations on our predictors
+boxTidwell(log(wage)~education+I(experience+0.5), data = df)
+# From before, we know that age and experience are highly correlated so both should not be included in the model.
+m1 <- lm( log(wage) ~ I(education^2) + log(I(experience+0.5)) , data=df)
+summary(m1)
+vif(m1) #Much better than before
+par(mfrow=c(2,2))
+plot( m1, id.n=0 )
+par(mfrow=c(1,1))
+
+residualPlots( m1 )
+avPlots(m1, id=list(method=list(cooks.distance(m1),"x"), n = 5))
+crPlots(m1)
+marginalModelPlots(m1) #How my model fits the data
+library(effects)
+plot(allEffects(m1))
+
+llres<-which(abs(rstudent(m1))>3);llres
+llhat<-which(hatvalues(m1)>3*length(coef(m1))/nrow(df));llhat
+llcoo<-Boxplot(cooks.distance(m1), id=list(n=2,labels=row.names(df)))
+influencePlot(m1)
+df[llres,]
+# Characteristics of the influential observations:
+ll<-which(row.names(df) %in% c("170", "199"));ll
+# ll<-which(row.names(df) %in% c("107","170","199","415","62"));ll
+test2 <- df[ll,]
+# df<-df[-ll,]
+
+m2 <- lm( log(wage) ~ I(education^2) + log(I(experience)+0.5), data=df[-ll,])
+summary(m2)
+vif(m2)
+par(mfrow=c(2,2))
+plot( m2, id.n=0 )
+par(mfrow=c(1,1))
+
+residualPlots( m2 )
+avPlots(m2, id=list(method=list(cooks.distance(m2),"x"), n = 7))
+marginalModelPlots(m2)
+library(effects)
+plot(allEffects(m2))
+
+llres<-which(abs(rstudent(m2))>3);llres
+llhat<-which(hatvalues(m2)>3*length(coef(m2))/nrow(df));llhat
+llcoo<-Boxplot(cooks.distance(m2), id=list(n=2,labels=row.names(df[-ll,])))
+influencePlot(m2, id=list(n=5,method="noteworthy"))
+
+names(df)
+m2 <- lm( log(wage) ~ I(education^2) + log(I(experience)+0.5) + ethnicity+region+gender+occupation+sector+union+married, data=df[-ll,])
+Anova(m2) #Net effects test
+
+# ll<-which(row.names(df) %in% c("415","170","199", "107","62","350","346","75"));ll
+m3 <- lm( log(wage) ~ I(education^2) + log(I(experience)+0.5) + region+gender+occupation+sector+union+ethnicity, data=df[-ll,])
+Anova(m3)
+vif(m3)
+summary(m3)
+AIC(m3)
+m4 <- step( m3 )
+influencePlot(m4,id=list(n=4,method="noteworthy"))
+
+# New categorical variables can be extracted from the actual ones?
+df$sectother<-0
+ll<-which(df$sector=="other")
+df$sectother[ll]<-1
+df$sectother <- factor( df$sectother, labels=c("SecOth-No","SecOth-Yes"))
+table(df$occupation)
+
+df$f.occ<-0
+ll<-which(df$occupation %in% c("technical","management"))
+df$f.occ[ll]<-1
+df$f.occ <- factor( df$f.occ, labels=c("f.occ-Base","f.occ-TeMn"))
+
+df$f.cauc<-0
+ll<-which(df$ethnicity %in% c("cauc"))
+df$f.cauc[ll]<-1
+df$f.cauc <- factor( df$f.cauc, labels=c("f.cauc-No","f.cauc-Yes"))
+
+ll<-which(row.names(df) %in% c("170", "199"));ll
+# ll<-which(row.names(df) %in% c("415","170","199", "107","62","350","346","75"));ll
+m4 <- lm( log(wage) ~ I(education^2) + log(I(experience)+0.5) + region+gender+f.occ+sectother+union+f.cauc, data=df[-ll,])
+Anova(m4)
+vif(m4)
+summary(m4)
+AIC(m4,m3)
+
+plot(allEffects(m4))
+
+m5 <- lm( log(wage) ~ (I(education^2) + log(I(experience)+0.5) )* ( region+gender+f.occ+sectother+union+f.cauc), data=df[-ll,])
+
+m6 <- step( m5 ) 
+summary( m6 )
+m7 <- step( m5, k=log(nrow(df)))
+summary( m7 ) #Inclusion of all the variables and step automatically eliminates the non-necessary ones
+allff
+plot(allEffects(m7))
+plot(Effect(c("education","sectother"),m7))
+
+vif(m7,type="predictor")
+par(mfrow=c(2,2))
+plot( m7, id.n=0 )
+par(mfrow=c(1,1))
+
+residualPlots( m7 )
+avPlots(m7, id=list(method=list(cooks.distance(m7),"x"), n = 7))
+marginalModelPlots(m7)
+
+
+influencePlot( m7, id=list(n=4,method="noteworthy"))
+llres<-which(abs(rstudent(m7))>3);llres
+llhat<-which(hatvalues(m7)>3*length(coef(m7))/nrow(df));llhat
+llcoo<-Boxplot(cooks.distance(m7),id=list(labels=row.names(df[-c(171,200),])))
+llCH<-which(cooks.distance(m7) > 4/(nrow(df)-length(coef(m7))));llCH
+influencePlot(m7)
+
+Anova(m7)
+ll<-which(row.names(df) %in% c("170", "199","408"));ll
+m8  <- lm(log(wage) ~ poly(education,2) + log(I(experience) + 
+    0.5) + gender + f.occ + sectother + union + poly(education,2):sectother + 
+    log(I(experience) + 0.5):gender, data = df[-ll, ])
+summary( m8 )
+residualPlots(m8)
+
+step(m8,k=log(nrow(df)))
+step(m8)
+coeftest(m8, vcov = vcovHC(m8, type = "HC0"))
+coefci(m8, vcov = vcovHC)
+```
+
+
+

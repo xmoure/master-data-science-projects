@@ -1,0 +1,715 @@
+---
+title: "CSI_lab - Session 1"
+author: "Lídia Montero"
+date: "2021"
+output: word_document
+editor_options: 
+  chunk_output_type: console
+---
+
+This is an R Markdown document. 
+We are showing some examples of GLMz. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>. Use * to provide emphasis such as *italics* and **bold**.
+
+Create lists: Unordered * and +     or   ordered   1. 2.  
+
+  1. Item 1
+  2. Item 2
+    + Item 2a
+    + Item 2b
+
+# Header 1
+## Header 2
+
+# Load Data Prestige
+
+```{r}
+
+# Clear plots from the R plots view:
+if(!is.null(dev.list())) dev.off()
+
+# Clean workspace - No variables at the current workspace
+rm(list=ls())
+
+# Car package loading (with its functions) to the current R session 
+library(car)
+Prestige # Dataset available at the library car 
+df<-Prestige
+
+```
+
+## EDA
+
+```{r}
+# Numeric summary (Different analysis for numeric or categorical variables)
+summary(df)
+
+# Graphics: fast (First analysis) -> Quick view of how is my data
+plot(df[,1:4])
+plot(df[,c(4,1:3)])
+
+# Important to note the relationship between variables (positivie, negative, relationship magnitude, etc.) Not sufficient to take decisions
+
+library(ggplot2) #Most famous library for R plotting
+library(GGally)
+ggpairs(df[,c(4,1:3)]) 
+# KDE of each of the variables, correlation between pairs of variables and scatterplots of pair of variables
+
+Boxplot(df[,1:4]) #Important to see outliers. Check for the next link to see how its components are calculated:
+# https://www.qvision.es/blogs/manuel-rodriguez/2015/03/30/interpretacion-de-los-graficos-de-caja-en-el-analisis-descriptivo-e-inferencial/
+# It is important to note the magnitude effect of each of the variables (Thousands vs units)
+  
+Boxplot(df[,1])
+
+# Target (Prestige value of every profession in terms of the type of profession)
+stripchart(prestige~type,method="stack",xlab="prestige",pch=19,col=3,main="Dotplot prestige",data=df)
+
+# Missing data
+# Artifitially setting of missing data for 0% women
+ll <- which( df$women==0); length(ll)
+
+# Percentage of women working at a specific profession=0 could be considered as an error. Although, it is subjective interpretation. See specific cases for more details:
+df[ll,]
+
+```
+
+# Define a new indicator factor for type of job 'prof'
+
+Create a new factor, dichotomy, indicating if an occupation refers to professional and managerial duties or not.
+
+```{r}
+# 1- Initialize a variable with all values setted at 0
+df$f.prof<-0
+# 2- Change its value for the cases where type of profession equals "prof"
+df$f.prof[df$type=="prof"]<-1
+# * Are there NA's present at the type variable
+table(df$type, useNA = "ifany")
+df$f.prof
+table(df$f.prof) #NA's in type have been converted to 0 as they are not equal to prof 
+str(df) #Type of variables present at df
+df$f.prof<-factor(df$f.prof,labels=c("Prof.No","Prof.Yes")) #Convert variable created to factor type
+str(df) #Conversion check
+
+
+summary(df)
+levels(df$type) <- paste0("f.type-", levels(df$type) ) #levels of the variable created could be adjusted using the function levels
+```
+
+# Normality Issues for target prestige
+
+- Does prestige seem to be normally distributed?
+
+```{r}
+# 1- Histogram for graphical analysis:
+hist(df$prestige,freq=F,breaks=10)
+# 2- Get mean and std of the variable:
+m=mean(df$prestige);std=sd(df$prestige);m;std
+# 3- What would be de density curve of a normal distribution with the same mean and std as prestige?
+curve(dnorm(x,m,std),col="red",lwd=2,add=T)
+
+```
+
+
+Compute the shaphiro test to check for the normality of my target or not using analytical methods (Shaphiro test)
+
+$$ H_0: X \sim Normal \ Distribution \\ H_1: X \not\sim Normal \ Distribution$$
+```{r}
+shapiro.test(df$prestige) #P-value < 0.05 -> We can reject H0
+
+hist(log(df$prestige)) #Log transformation is 
+shapiro.test(log(df$prestige)) # P-value > 0.05 -> We can not reject H0 (Although, we are on the limit)
+
+# Econometric approaches; Not important for this subject (Take them as proposals which could be applied)
+library(lmtest)
+acf(df$prestige)
+dwtest(prestige~1,data=df)
+dwtest(prestige~type,data=df)
+
+# We will generate data from the AR(1) model Xt=.9Xt-1+Wt -> Temporary series AR(1) model
+corsample <- arima.sim(model = list(order = c(1, 0, 0), ar = .9), n = 1000) 
+acf(corsample)
+```
+
+Test on normal mean: confidence interval
+
+- Calculate a 95% CI for prestige mean.
+
+Let's suppose that the data in Prestige follows a Normal distribution (Conditions of the central limit theorem could be applied)... In this case, the following tests on the mean should be applied. 
+
+Situation:
+
+- Normal distribution
+
+- Inference on the mean of a population
+
+- Population variance unknown
+
+```{r}
+# Page 89 of the Topic 1 pdf slides (Test hypothesis and CI over the population mean)
+t.test(df$prestige, alternative = "two.sided", conf.level = 0.95) # Default values
+t.test(df$prestige, alternative = "less", conf.level = 0.95 ) # Less
+t.test(df$prestige, alternative = "greater", conf.level = 0.95 ) # Default values
+t.test(df$prestige, alternative = "two.sided", conf.level = 0.99 ) # 99% CI
+
+t.test(df$prestige, alternative = "two.sided", conf.level = 0.95, mu=50) # Bilateral
+t.test(df$prestige-50, alternative = "less", conf.level = 0.95 ) # less p(H1)=0.967
+t.test(df$prestige-50, alternative = "greater", conf.level = 0.95 ) # greater p(H1)=1-0.967
+
+# Calculate 95% CI for mean - Bilateral
+mm = mean( df$prestige ); ss = sd( df$prestige ); mm; ss
+
+# Unknown variance (slide 94 for more details)
+# Lower bound 95% for mean: (lower bount to + Inf)
+meanlci <- mm - qt(0.975, 101) * ss/sqrt(nrow(df)); meanlci
+# Upper bound 95% for mean (-Inf to upper bound)
+meanhci <- mm + qt(0.975, 101) * ss/sqrt(nrow(df)); meanhci
+
+# Aproximation 95% CI for mean - Bilateral (slide 88 for more details)
+# In case of knowing the population variance:
+meanlci <- mm - qnorm(0.975) * ss/sqrt(nrow(df))
+meanhci <- mm + qnorm(0.975) * ss/sqrt(nrow(df))
+meanlci;meanhci
+```
+
+Test on normal variance from a normal population: confidence interval
+
+- Calculate a 95% CI for prestige variance.
+
+Situation:
+
+- Normal distribution
+
+- Inference on the variance of a population
+
+- Population variance unknown (as it is logic)
+
+```{r}
+# Check the slide 106 of the pdf of the topic 1:
+library(EnvStats)
+vv = var(df$prestige); vv #Quasivariance (denominator is n-1 and not n) - Slide 21 to check for its formulae
+varTest(df$prestige, alternative = "two.sided", conf.level = 0.95, sigma.squared = vv ) # Default values for alternative and confidence level
+varTest(df$prestige, alternative = "greater", conf.level = 0.95, sigma.squared = vv )
+varTest(df$prestige, alternative = "less", conf.level = 0.95, sigma.squared = vv )
+
+varTest(df$prestige, alternative = "greater", conf.level = 0.95, sigma.squared = 100 )
+varTest(df$prestige, alternative = "two.sided", conf.level = 0.95, sigma.squared = 100)
+varTest(df$prestige, alternative = "less", conf.level = 0.95, sigma.squared = 600 )
+varTest(df$prestige, alternative = "greater", conf.level = 0.95, sigma.squared = 600 )
+
+# Calculate 95% CI for variance  - Bilateral (Check slide 112 for more details on how it is calculated and where this operations come from)
+
+varlci <- (nrow(df) - 1)*vv / qchisq(0.975, 101) 
+varhci <- (nrow(df) - 1)*vv / qchisq(0.025, 101) 
+varlci;varhci
+
+# Lower bound 95% for var: (lower bount to + Inf)
+varlci <- (nrow(df) - 1)*vv / qchisq(0.975, 101); varlci
+
+# Upper bound 95% for mean (0 to upper bound)
+varhci <- (nrow(df) - 1)*vv / qchisq(0.025, 101); varhci
+```
+
+
+# Global Association among numeric variables
+
+```{r}
+# Numeric insights
+cor(df[,c(4,1:3)],method="pearson") # Parametric version for normal-like variables 
+cor(df[,c(4,1:3)],method="spearman") # Non Parametric version for general variables
+# Interpretation: 
+# - Positive or negative
+# - Stronger as closer to 1 or to -1
+
+# Graphics
+plot(df[,c(4,1:3)])
+
+# Inferential Tools:
+# Test Hypothesis to test whether my population rho equals 0 or not. Also, it is important to apply the correct test considering we are in a parametric context or not. 
+cor.test(df$prestige,df$income,method="pearson")
+cor.test(df$prestige,df$income,method="spearman",data=df)
+```
+
+# Global Association Y~A (binary) and Y~C (polytomic)
+
+- Does prestige depend on the type of occupation? Or on having professional/managerial  profile?  Formulate and quantify pvalues for testing group means.
+
+Above analysis have been applied to a single numeric variable or to two numeric variables (correlation, for example). What if we have a numeric variable and a categorical variable...
+
+```{r}
+# Numeric (Basic analysis)
+with(df, tapply(prestige,type,summary))
+
+# Graphics
+Boxplot(prestige~type,data=df, id=list(n=Inf,labels=row.names(df))) # It does not work
+Boxplot(prestige~type,data=df[!is.na(df$type),], id=list( n=Inf, labels = row.names(df[!is.na(df$type),] ) ) )
+#id stands for the characteristics on the replacements that we want to apply over the points:
+
+# Numeric
+with(df, tapply(prestige,f.prof,summary))
+# Graphics
+Boxplot(prestige~f.prof,data=df, id=list(n=Inf,labels=row.names(df))) # It does work (Because there are no NA's)
+```
+
+Tests on means depending on the group:
+
+Hypothesis of the following tests:
+
+$$H_0: the \ means \ of \ the \ different \ groups \ are \ the \ same \\ H_1: At \ least \ one \ population \ mean \ is \ not \ equal \ to \ the \ others $$
+
+```{r}
+
+# Inferential tools (More thhan one population defined by the factor)
+
+oneway.test(prestige~type,data=df)  # Parametric
+kruskal.test(prestige~type,data=df) # Non Parametric
+
+
+# Inferential tools for a binary factor (Two populations defined by the factor which wants to be analyzed)
+
+t.test(prestige~f.prof,data=df)  # Parametric
+wilcox.test(prestige~f.prof,data=df) # Non Parametric
+```
+
+Specific Association Tests on means Y~C (polytomic)
+
+The following tests should be applied in the case of working with paired data. You can check the slide 97 at the pdf of topic 1 for more details:
+
+Hypothesis:
+
+$$H_0: \mu_1=\mu_2 \\ H_1: \mu_1 \not=/>/<\mu_2 $$
+Specific tests for paired data (Check slide 97 of the pdf for more details):
+
+- Analysis for data extractions which by its naturality presents paired data.
+
+Situation:
+
+- Normal distribution or not
+
+- Inference on the mean of paired differences
+
+- Population variance unknown
+
+```{r}
+# Inferential tools
+
+pairwise.t.test(df$prestige,df$type)  # Parametric
+pairwise.wilcox.test(df$prestige,df$type) # Non Parametric
+
+pairwise.t.test(df$prestige,df$type, alternative="less")  # Parametric
+pairwise.wilcox.test(df$prestige,df$type, alternative="less") # Non Parametric
+
+pairwise.t.test(df$prestige,df$type, alternative="greater")  # Parametric
+pairwise.wilcox.test(df$prestige,df$type, alternative="greater") # Non Parametric
+```
+
+Tests on variances for groups defined by a factor:
+
+- Does the dispersion of prestige depend on the type of occupation? Or on having professional/managerial
+profile? Formulate and quantify pvalues for testing group variances.
+
+Hypothesis ($\sigma_i$ in the case of having multiple factors in the categorical variable):
+
+$$H_0: \sigma_1=\sigma_2 \\ H_1: \sigma_1 \not=/>/<\sigma_2 $$ 
+
+```{r}
+# Inferential tools   C Polytomic factor
+
+bartlett.test(prestige~type,data=df)  # Parametric
+fligner.test(prestige~type,data=df) # Non Parametric
+
+# Inferential tools for a binary factor
+
+var.test(prestige~f.prof,data=df)  # Parametric
+fligner.test(prestige~f.prof,data=df) # Non Parametric
+```
+
+# Load Swiss Labor Force data set
+
+
+```{r}
+install.packages("AER")
+library(AER) #AER package loading
+data("SwissLabor")
+ls()
+df<-SwissLabor
+summary(df)
+
+# Factor treatment:
+levels(df$participation) <- paste0("f.par-",levels(df$participation))
+levels(df$foreign) <- paste0("f.for-",levels(df$foreign))
+
+# Absolute frequencies:
+table( df$participation )
+# Proportional frequencies (from 0 to 1):
+prop.table( table( df$participation ) )
+
+```
+
+
+Hypothesis testing on a binomial proportion (Slide 116 for more details) - Exact Test:
+
+Null hypothesis:
+
+$$H_0: p=p_0 $$
+
+```{r}
+binom.test(x = 401, n = nrow( SwissLabor ), p=1/2, alternative = "two.sided" ) # Default Two-sided
+binom.test(x = 401, n = nrow( SwissLabor ), p=1/2, alternative = "greater") # P(H1) = 1- 0.9919
+binom.test(x = 401, n = nrow( SwissLabor ), p=1/2, alternative = "less") # P(H1) = 0.9919
+```
+
+
+Hypothesis testing on a binomial proportion (Slide 116 for more details) - :
+
+```{r}
+prop.test(x = 401, n = nrow( SwissLabor ), p=1/2, alternative = "two.sided", correct = F)
+# Chi sqaured test -> Slide 134 for more details:
+chist <- (((401-436)^2)/436  + ((471-436)^2)/436);chist
+1-pchisq(chist,1)
+qchisq(0.975,1)
+
+
+prop.test(x = 401, n = nrow( SwissLabor ), p=1/2, alternative = "less", correct = F)
+prop.test(x = 401, n = nrow( SwissLabor ), p=1/2, alternative = "greater", correct = F)
+```
+
+
+95% CI for population probability
+
+Assumption:
+ - Normal population
+ - Inference on the proportion of a population
+
+```{r}
+pp = 401/872; pp
+pplci <- pp - qnorm( 0.975) * sqrt(pp * ( 1-pp )/ 872)
+pphci <- pp + qnorm( 0.975) * sqrt(pp * ( 1-pp )/ 872)
+pplci; pphci
+```
+
+Chi-squared test: Compare the counts in a contingency table:
+
+$$H_0: X \ and \ Y are \ independent$$
+
+```{r}
+# Propability of participation depending on foreign status
+table( df$participation, df$foreig )
+# Margin frequencies:
+margin.table(table(df$participation, df$foreig),2)
+# Chi squared test over the expected frequencies:
+prop.table( table( df$participation, df$foreig ),2 )
+prop.test( c(254, 147), c(656, 216), correct = F)
+```
+
+Normality on my target income
+
+```{r}
+hist(df$income,freq=F,breaks=10)
+m=mean(df$income);std=sd(df$income);m;std
+curve(dnorm(x,m,std),col="red",lwd=2,add=T)
+
+# Normality on the variable income
+
+library(lmtest)
+shapiro.test(df$income)
+shapiro.test(log(df$income))
+```
+
+Income depending on participation:
+
+```{r}
+stripchart(df$income~df$participation,method="stack",xlab="Income vs Participation",pch=19,col=3,main="Dotplot prestige in SwissLabor")
+
+# Test on means for k=3 groups defined by type
+oneway.test(df$income~df$participation) # Parametric test: normal data (Y)
+kruskal.test(df$income~df$participation)
+
+# Test on variances for k=3 groups defined by type
+bartlett.test(income~participation,data=df) # Parametric test: normal data (Y)
+fligner.test(income~participation,data=df)
+bptest(income~participation,data=df) # Breusch Pagan Test: popular in econometrics
+```
+
+Bootstrap analysis:
+
+- Statistical technique for estimating quantities about a population by averaging estimates from multiple small data samples.
+
+- These samples are constructed by drawing observations from a large data sample one at a time and returning them to the data sample after they have been chosen.
+
+Why?
+
+- There are less assumptions about the underlying distribution using bootstrap compared to calculating the standard error directly.
+
+(More details at slide 151 of the topic 1 pdf)
+
+```{r}
+# Basic Bootstrap procedure
+# 95% for income median
+library(boot)
+median.fun <- function( data, idx ) { dv<-data[ idx, "income"];median( dv )}
+bootstrapdis <- boot( SwissLabor, median.fun, R = 500)
+bootstrapdis$t
+plot( bootstrapdis )
+str( bootstrapdis )
+quantile( bootstrapdis$t, seq(0,1,0.025))
+summary( SwissLabor$income )
+
+# 95%CI for correlation between age and education
+# bootstrap 
+set.seed(12345)
+corr.fun <- function(data, idx) {
+  df <- data[idx, ]
+  cor(df[, 3], df[, 4], method = 'spearman')
+}
+bootdis<-boot(SwissLabor, corr.fun, R = 999)
+plot(bootdis)
+boot.ci( boot.out=bootdis )
+
+# More details of how these intervals are calculated:
+# https://elizavetalebedeva.com/bootstrapping-confidence-intervals-the-basics/
+  
+```
+
+
+## Missing data treatment
+
+```{r}
+library(car)
+Prestige
+df<-Prestige
+df$f.prof<-0
+df$f.prof[df$type=="prof"]<-1
+table(df$type, useNA = "ifany")
+df$f.prof
+table(df$f.prof)
+df$f.prof<-factor(df$f.prof,labels=c("Prof.No","Prof.Yes"))
+
+summary(df)
+levels(df$type) <- paste0("f.type-", levels(df$type) )
+
+# Missing data
+# Artifitially setting of missing data for 0% women (For posterior analysis)
+ll <- which( df$women==0); length(ll)
+df$women[ ll ] <- NA
+
+```
+
+First possible missing imputation:
+
+- Imputation the mean of the non-missing data
+
+```{r}
+# Numeric variables: remove NA by assignment of variable mean
+mm<-mean(df$women,na.rm=T);mm
+df[is.na(df$women),"women"]<-mm
+
+# Validation of imputed variables
+summary(Prestige$women)
+summary(df$women)
+
+par(mfrow=c(1,2))
+hist(Prestige$women,col="green")
+hist(df$women,col="red")
+par(mfrow=c(1,1))
+summary(df)
+summary(Prestige)
+```
+
+Second possible missing imputation:
+
+- Using the package missMDA and perform a PCA analysis which imputes the most expected value for a missing value based on the other explanatory variables and the other numeric/categorical variables relationship with other values.
+
+Cases:
+
+- imputePCA for numeric variables
+
+- imputeMCA for categorical variables
+
+```{r}
+# Professional Tools: library missMDA
+library(missMDA)
+df[,1:4]<-Prestige[,1:4]
+ll <- which( df$women==0); length(ll)
+df$women[ ll ] <- NA
+summary(df)
+res.pca<-imputePCA(df[,1:4])
+summary(res.pca$completeObs)
+```
+
+Other package for this type of imputation (You can see the details on the comments included)
+
+```{r}
+# mice library: useful for numeric and factor imputation
+library(mice)
+res.mice <- mice(df)
+str(res.mice)
+res.mice$data # Original dataset
+complete(res.mice) # Data frame containing completed data set
+
+# Plot
+
+par(mfrow=c(1,3))
+hist(Prestige$women,col="green")
+hist(df$women,col="red")
+hist(res.pca$completeObs[,3],col="blue")
+par(mfrow=c(1,1))
+
+#imputeMCA:
+
+res.mca<-imputeMCA(df[,6:7],method="EM") # See the details of the algorithm on the help of the function (?imputeMCA)
+cbind(res.mca$completeObs[,"type"],df$type)
+df[,1:6]<-Prestige[,1:6] # NAs are retained
+
+```
+
+# Univariate outlier detection:
+
+- An observation $x$ is declared as an extreme outlier, if it lies outside the interval (check slide 9 of the topic 2 for more details).
+
+$$ Q1 - 3*IQR \ || \ Q3 + 3*IQR$$
+Where $IQR$ is the interquartile range: $Q3-Q1$.
+
+```{r}
+# Interesting function:
+calcQ <- function(x) {
+  s.x <- summary(x)
+  iqr<-s.x[5]-s.x[2]
+  list(souti=s.x[2]-3*iqr, mouti=s.x[2]-1.5*iqr, min=s.x[1], q1=s.x[2], q2=s.x[3], 
+       q3=s.x[5], max=s.x[6], mouts=s.x[5]+1.5*iqr, souts=s.x[5]+3*iqr ) }
+
+# Individual analysis of my explanatory variables:
+# Univariate outlier detection:
+
+# 1- Education:
+par(mfrow=c(1,1))
+Boxplot(df$income)
+var_out<-calcQ(df$income)
+abline(h=var_out$souts,col="red")
+abline(h=var_out$souti,col="red")
+abline(h=var_out$mouts,col="red")
+llout_income<-which((df$income<var_out$souti)|(df$income>var_out$souts))
+
+# Assign them as NA's to impute them later:
+df[llout_income, 'income'] <- NA
+```
+
+
+# Multivariate Outlier detection (NAs should be avoided): only for numeric variables
+
+- Outliers can be multivariate (slide 27 of the topic 2 for more details)
+
+- Univariate detection of outliers doesn’t imply multivariate detection
+
+```{r}
+library(chemometrics)
+res.out<-Moutlier(Prestige[,1:4],quantile=0.975)
+str(res.out)
+res.out
+quantile(res.out$md,seq(0,1,0.025))
+which((res.out$md > res.out$cutoff) & (res.out$rd > res.out$cutoff))
+plot( res.out$md, res.out$rd )
+text(res.out$md, res.out$rd, labels=rownames(df),adj=1, cex=0.5)
+abline(h=res.out$cutoff, col="red")
+abline(v=res.out$cutoff, col="red")
+
+res.out$cutoff^2
+qchisq(0.975,4)
+```
+
+# Profiling and Feature Selection Tools in FactoMineR
+
+Consists on characterizing the distribution of my target (response variable) in terms of my explanatory variables.The applied function depends on if my target is numeric or not (check slide 33 of the topic 2 for more details):
+
+- Numeric target: condes
+
+- Catgeorical target: catdes
+
+```{r}
+library(FactoMineR)
+options(contrasts=c("contr.treatment","contr.treatment"))
+?condes
+res.con<-condes(df,4)
+str(res.con)
+names(res.con)
+res.con$quanti
+res.con$quali
+res.con$category
+
+# Just to try: Let type be the response for example purposes
+names(df)
+res.cat<-catdes(df,num.var=6)
+names(res.cat)
+res.cat$test.chi2
+res.cat$category
+res.cat$quanti.var
+res.cat$quanti
+```
+
+
+# Load CPS Data set
+
+```{r}
+library(AER)
+data("CPS1985")
+ls()
+df<-CPS1985
+summary(df)
+
+hist(df$wage,freq=F,breaks=10)
+m=mean(df$wage);std=sd(df$wage);m;std
+curve(dnorm(x,m,std),col="red",lwd=2,add=T)
+
+library(lmtest)
+dwtest(wage~1,data=df)
+shapiro.test(df$wage)  
+
+stripchart(df$wage~df$ethnicity,method="stack",xlab="Wage vs sector",pch=19,col=3,main="Dotplot Wage in CPS1985")
+
+# Test on means for k=3 groups defined by sector
+oneway.test(df$wage~df$sector) # Parametric test: normal data (Y)
+kruskal.test(df$wage~df$sector)
+
+# Test on variances for k=3 groups defined by sector
+bartlett.test(wage~sector,data=df) # Parametric test: normal data (Y)
+fligner.test(wage~sector,data=df)
+bptest(wage~sector,data=df) # Breusch Pagan Test: popular in econometrics
+
+library(FactoMineR)
+res.con <- condes(df,1)  # Target wage (natural target)
+res.cat <- catdes(df,5)  # Target ethnicity
+
+res.con$quanti
+res.con$quali
+res.con$category
+
+res.cat$test.chi2
+res.cat$category
+res.cat$quanti.var
+res.cat$quanti
+```
+
+PCA example:
+
+- Reduction of dimensionality
+
+- Trying to explain my data using the less possible number of explanatory variables:
+
+```{r}
+# Temperatures can be summarised by two synthetic variables: average annual temperature and thermal amplitude
+library(FactoMineR)
+temperature <- read.table("http://factominer.free.fr/book/temperature.csv",header=TRUE,sep=";",dec=".",row.names=1)
+
+summary(temperature)
+
+# Target : Annual
+# Active variables temperatures Jan to Dec
+res<-PCA(temperature[,1:12])
+res<-PCA(temperature[,1:16],quanti.sup=13:16)
+res<-PCA(temperature,ind.sup=24:35,quanti.sup=13:16,quali.sup=17)
+
+summary(res, nb.dec = 2, ncp = 4, nbelements = 12 )
+res.con <- dimdesc(res,1:2)
+str(res.con)
+res.con$Dim.1
+res.con$Dim.2
+```
+

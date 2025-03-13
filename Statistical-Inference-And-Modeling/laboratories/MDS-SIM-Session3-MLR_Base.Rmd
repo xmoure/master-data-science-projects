@@ -1,0 +1,441 @@
+---
+title: "Multiple Linear Regression_lab Session 3"
+author: "Lídia Montero"
+date: "Oct 17th,2022"
+output: word_document
+editor_options: 
+  chunk_output_type: console
+---
+
+
+# Load libraries and set current directory (no needed when .Rproj is already defined)
+
+```{r}
+# Clear plots
+if(!is.null(dev.list())) dev.off()
+
+# Clean workspace
+rm(list=ls())
+
+library(car)
+library(FactoMineR)
+library(lmtest)
+library(effects)
+library(AER)
+```
+
+
+# Cancer prevalence according to smoking habits
+
+Name:  smokCancer (Smoking and Cancer) 
+Referència: J.F. Fraumeni, "Cigarette Smoking and Cancers of the Urinary Tract: Geographic Variations in the United States," 
+Journal of the National Cancer Institute, 41, 1205‐1211, (1968)  
+
+Description:  
+Number of sold cigarettes per càpita in 43 estates and Columbia district in 1960 including number of death per 100.000 inhabitants due to cancer. 
+Number of observations: 44  
+
+Variables:  
+  1.  CIG = Number of cigarrettes (hundreds per capita)  
+  2.  BLAD = Deaths per 100K inhabitants - Blad cancer
+  3.  LUNG = Deaths per 100K inhabitants - Lung cancer   4.  KID = Deaths per 100K inhabitants - Kidney cancer
+  5.  LEUK = Deaths per 100K inhabitants  - Leukemia  
+
+  
+## Load data and first exploratory analysis
+
+```{r tabac}
+df<-read.table("smokCancer.csv",header=T,sep=";",dec=",")
+summary(df)
+
+rownames(df)<-abbreviate(df[,1],method="both.sides")
+boxplot(df[,c(3:6,2)])
+library(car)
+par(mfrow=c(1,1))
+Boxplot(df$CIG, id=list(n=3,labels=row.names(df)))
+Boxplot(df$KID, id=list(n=Inf,labels=row.names(df)))
+Boxplot(df$LEUK, id=list(n=Inf,labels=row.names(df)))
+```
+
+What is the linear correlation between pairs of variables?
+
+```{r}
+plot(df[,c(3:6,2)])
+cor(df[,c(3:6,2)])
+```
+
+## First linear estimation: Does the number of BLAD cancer deaths depend on the number of sold cigarretes?
+
+```{r}
+attach(df) # Be careful when using attach()
+plot(CIG,BLAD,pch=19,col="red",main="Blad cancer vs cigarettes")
+
+# Plot points and overlap first regression model
+# 
+abline(lsfit(CIG,BLAD),col="red",lwd=4, lty=3)
+text(CIG,BLAD,labels=row.names(df),adj=1.5,col="grey30")
+#
+m1<-lm(BLAD~CIG,data=df)
+summary(m1)
+```
+
+What can we find the data which assess the following hypothesis test:
+
+$$H_0: \beta_2 = 0 \\ H_1: \beta_2 \neq 0 $$
+
+```{r}
+coef(m1)
+2*(1-pt(2.242,42))
+```
+
+Is the reduction in the sum of squares significant due to the inclusion of the variable CIG in the analysis?
+
+```{r}
+anova(m1) # p value for CIG is equal to p value omnibus test for regression
+```
+
+What about the residual analysis on the linear model estimated?
+
+```{r}
+cbind(response=resid(m1,type="response"), working=resid(m1,type="working"), 
+deviance=resid(m1,type="deviance"), 
+pearson=resid(m1,type="pearson")) 
+
+par(mfrow=c(2,2))
+plot(m1, id.n=5)
+par(mfrow=c(1,1))
+```
+
+Are there any residual outliers on the linear model estimated?
+
+```{r}
+Boxplot(rstudent(m1))
+```
+
+Are there any influential observations on the linear model estimated?
+
+```{r}
+influenceIndexPlot(m1,id=list(labels=row.names(df), n = 5))
+influencePlot(m1,id=list(method="noteworthy",n=3),col=2)
+```
+
+
+Do we need to exclude any of the observations from the analysis (because they are influential observations)?
+
+```{r}
+llev <- which(hatvalues(m1)>3*(2/44))
+llev
+lout <- Boxplot(cooks.distance(m1),id=list(n=3))
+llout <- Boxplot(cooks.distance(m1),id=list(n=3,labels=rownames(df)))
+llout
+
+thrChH <- 4/(nrow(df)-length(coef(m1)));thrChH  # Not neeeded
+```
+
+
+Check model fitting using non-default assessment tools included in car package
+
+```{r}
+marginalModelPlots(m1,id=list(method=cooks.distance(m1),n=3))
+residualPlots(m1,id=list(method=cooks.distance(m1),n=3))
+avPlots(m1)
+```
+
+Do we need to apply a transformation either to the response variable, or to the explanatory variable?
+
+```{r}
+boxTidwell(BLAD~CIG,data=df)
+library(MASS)
+boxcox(BLAD~CIG,data=df) # Traditional method in MASS library
+maux <- lm(BLAD~boxCoxVariable(KID)+CIG, data=df) # Modern procedure included in car library#Not significant at a 0.05 significance level 
+summary(maux) # Modern procedure included in car library
+```
+
+## LUNG - Follow the steps shown above
+
+```{r}
+attach(df)
+plot(CIG,LUNG,pch=19,col="green",main="Lung cancer vs cigarettes")
+abline(lsfit(CIG,LUNG),col="green",lwd=4, lty=3)
+text(CIG,LUNG,labels=row.names(df),adj=1.5,col="grey30")
+#
+m2<-lm(LUNG~CIG,data=df)
+summary(m2)
+
+coef(m2)
+2*(1-pt(6.306,42))
+
+anova(m2) # p value for CIG is equal to p value omnibus test for regression
+
+cbind(response=resid(m2,type="response"), working=resid(m1,type="working"), 
+deviance=resid(m2,type="deviance"), 
+pearson=resid(m2,type="pearson")) 
+
+par(mfrow=c(2,2))
+plot(m2, id.n=5)
+par(mfrow=c(1,1))
+Boxplot(rstudent(m2),labels=rownames(df))
+
+influenceIndexPlot(m2,id=list(labels=row.names(df), n = 5))
+influencePlot(m2,id=list(labels=row.names(df), n = 5))
+marginalModelPlots(m2,id=list(labels=row.names(df), n = 5))
+residualPlots(m2,id=list(labels=row.names(df), n = 5))
+avPlots(m2)
+
+boxTidwell(LUNG~CIG,data=df)
+library(MASS)
+boxcox(LUNG~CIG,data=df)
+
+m22<-lm(LUNG~log(CIG),data=df)
+summary(m22)
+par(mfrow=c(2,2))
+plot(m22, id.n=5)
+par(mfrow=c(1,1))
+marginalModelPlots(m22,id=list(labels=row.names(df), n = 5))
+residualPlots(m22,id=list(labels=row.names(df), n = 5))
+influencePlot(m22,id=list(labels=row.names(df), n = 5))
+```
+
+## KIDNEY
+
+```{r}
+attach(df)
+plot(CIG,KID,pch=19,col="blue",main="Kidney cancer vs cigarettes")
+abline(lsfit(CIG,KID),col="blue",lwd=4, lty=3)
+text(CIG,KID,labels=row.names(df),adj=1.5,col="grey30")
+#
+m3<-lm(KID~CIG,data=df)
+summary(m3)
+
+anova(m3) # p value for CIG is equal to p value omnibus test for regression
+
+cbind(response=resid(m3,type="response"), working=resid(m3,type="working"), 
+deviance=resid(m3,type="deviance"), 
+pearson=resid(m3,type="pearson")) 
+
+par(mfrow=c(2,2))
+plot(m3, id.n=5)
+par(mfrow=c(1,1))
+
+Boxplot(rstudent(m3),id=list(labels=row.names(df), n = 5))
+
+influenceIndexPlot(m3,id=list(labels=row.names(df), n = 5))
+influencePlot(m3,id=list(labels=row.names(df), n = 5))
+
+marginalModelPlots(m3,id=list(labels=row.names(df), n = 5))
+residualPlots(m3,id=list(labels=row.names(df), n = 5))
+
+boxTidwell(KID~CIG,data=df)
+library(MASS)
+boxcox(KID~CIG,data=df)
+
+m33<-lm(KID~poly(CIG,2),data=df)
+summary(m33)
+marginalModelPlots(m33,id=list(n = 5))
+residualPlots(m33,id=list(labels=row.names(df), n = 5))
+influencePlot(m33,id=list(labels=row.names(df), n = 5))
+```
+
+# Aliments
+
+```{r tabac}
+df<-read.table("Aliments.csv",header=T,sep=";",dec=",")
+
+summary(df)
+
+library(car)
+par(mfrow=c(1,1))
+Boxplot(df$Kcalories,labels=row.names(df))
+
+# Bivariant
+plot(df[,c(2,3:9)])
+round(cor(df[,c(2,3:9)]),dig=2)
+
+m5<-lm(Kcalories~.-Producte,data=df)
+summary(m5)
+
+step(m5)
+vif(m5)
+
+m6<-lm(Kcalories~Proteines+HidratsCarboni+Greixos+Fibra,data=df)
+summary(m6)
+vif(m6)
+```
+
+# Attitude
+
+```{r}
+summary(attitude)
+boxplot(attitude)
+pairs (attitude)
+cor(attitude)
+
+mod=lm(rating~.,attitude)
+
+summary(mod)
+vif(mod)
+
+mod=step(mod)
+anova(mod)
+vif(mod)
+
+par(mfrow=c(2,2))
+plot(mod)
+par(mfrow=c(1,1))
+
+# Transformations
+# 
+boxTidwell(rating ~ complaints + learning, data=attitude)
+
+library(MASS)
+boxcox(rating ~ complaints + learning, data=attitude)
+
+# Alternative method
+maux <- lm(rating ~ boxCoxVariable(rating)+complaints + learning, data=attitude)
+summary(maux)
+
+marginalModelPlots(mod, id=list( n = 5))
+residualPlots(mod,id=list(labels=row.names(attitude), n = 5))
+influencePlot(mod,id=list(labels=row.names(attitude), n = 5))
+avPlots(mod,id=list(labels=row.names(attitude), n = 5))
+```
+
+
+# Prestige
+
+```{r}
+Prestige
+df<-Prestige
+
+# Numeric summary
+summary(df)
+
+# Graphics: fast
+plot(df[,1:4])
+plot(df[,c(4,1:3)])
+Boxplot(df[,1:4])
+```
+
+# Define a new indicator factor for type of job 'prof'
+
+```{r}
+df$f.prof<-0
+df$f.prof[df$type=="prof"]<-1
+table(df$type)
+df$f.prof
+table(df$f.prof)
+df$f.prof<-factor(df$f.prof,labels=c("Prof.No","Prof.Yes"))
+
+summary(df)
+```
+
+
+# Normality Issues for target prestige
+
+```{r}
+hist(df$prestige,freq=F,breaks=10)
+m=mean(df$prestige);std=sd(df$prestige);m;std
+curve(dnorm(x,m,std),col="red",lwd=2,add=T)
+
+shapiro.test(df$prestige)  # Not necessary here: package lmtest has some additional normality tests
+library(lmtest)
+dwtest(prestige~type,data=df)
+
+```
+
+
+# Global Association among numeric variables
+
+```{r}
+# Numeric insights
+cor(df[,c(4,1:3)],method="pearson") # Parametric
+cor(df[,c(4,1:3)],method="spearman") # Non Parametric
+
+# Graphics
+plot(df[,c(4,1:3)])
+
+# Inferential Tools
+# 
+cor.test(df$prestige,df$income,method="spearman")
+cor.test(df$prestige,df$income,method="spearman",data=df)
+
+```
+
+# Profiling and Feature Selection Tools in FactoMineR
+
+```{r}
+library(FactoMineR)
+
+?condes
+res.con<-condes(df,4)
+str(res.con)
+names(res.con)
+res.con$quanti
+res.con$quali
+res.con$category
+
+```
+
+# Multivariate Outlier detection (NAs should be avoided): only for numeric variables
+```{r}
+library(chemometrics)
+res.out<-Moutlier(df[,1:4],quantile=0.995)
+ll <- which( (res.out$md > res.out$cutoff) & (res.out$rd > res.out$cutoff) );length(ll)
+df[ll,]
+```
+
+## Modeling using explanatory numeric variables
+
+```{r}
+head(df)
+m1 <- lm( prestige ~., data=df[,c(1:4)])
+m2 <- step( m1 )
+par(mfrow=c(2,2))
+plot(m2, id.n=0)
+par(mfrow=c(1,1))
+
+influencePlot( m2 )
+```
+
+# Davis
+
+```{r}
+data(Davis)
+
+# Univariant EDA
+## Numeric Statistics
+
+summary(Davis)
+
+## Graphics
+### Factor - sex
+
+
+### Numeric vars  height
+
+hist(Davis$height)
+hist(Davis$height,main="My first Histogram",col="magenta")
+
+hist(Davis$height,10,main="My first Histogram",col="magenta")
+hist(Davis$height,breaks=seq(50,200,5),main="My first Histogram",col="magenta")
+
+seq(50,200,10)
+
+hist(Davis$height,freq=F,breaks=seq(50,200,5),main="My first Histogram",col="magenta")
+mm<-mean(Davis$height);ss<-sd(Davis$height);mm;ss
+curve(dnorm(x,mm,ss),add=T,col="blue",lwd=2)
+
+### CSI Normally distributed height?
+shapiro.test(Davis$height)
+
+Davis[12,]
+# Once the outlier has been discarted, it is a mistake. Let us fix it
+
+Davis$height[12]<-166
+Davis$weight[12]<-57
+# Alternatives
+Davis[12,2:3]<-c(57,166)
+
+# Continue
+```
+

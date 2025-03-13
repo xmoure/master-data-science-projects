@@ -1,0 +1,37 @@
+* {
+    margin: 0;
+    padding: 0;
+  }
+
+.content {
+    background-color: gray;
+}
+
+.container {
+    display: flex;
+}
+
+.input-container:nth-child(2)>div,
+.input-container:nth-child(3)>div{
+  padding-left: 20%;
+}
+
+.input-container {
+    flex-direction: column;
+}
+
+
+.row-style {
+    display: flex;
+}
+
+
+
+.input-style {
+    min-width: 300px;
+}
+
+.test {
+    display: flex;
+    flex-direction: column;
+}

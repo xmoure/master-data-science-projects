@@ -1,0 +1,295 @@
+---
+title: "Multiple Linear Regression_lab Session 3"
+author: "Lídia Montero and Josep Franquet"
+date: "2021"
+output: word_document
+editor_options: 
+  chunk_output_type: console
+---
+
+This is an R Markdown document. 
+We are showing some examples of GLMz. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>. Use * to provide emphasis such as *italics* and **bold**.
+
+Create lists: Unordered * and +     or   ordered   1. 2.  
+
+  1. Item 1
+  2. Item 2
+    + Item 2a
+    + Item 2b
+
+# Header 1
+## Header 2
+
+# Load libraries and set current directory
+
+```{r}
+# Clear plots
+if(!is.null(dev.list())) dev.off()
+
+# Clean workspace
+rm(list=ls())
+
+setwd("D:/Docencia_UPC/MDS-SIM/2022-2023/Lab 3")
+
+library(car)
+library(FactoMineR)
+library(lmtest)
+library(effects)
+library(AER)
+```
+
+
+# Description
+
+Name:  smokCancer (Smoking and Cancer) 
+Referència: J.F. Fraumeni, "Cigarette Smoking and Cancers of the Urinary Tract: Geographic Variations in the United States," 
+Journal of the National Cancer Institute, 41, 1205‐1211, (1968)  
+
+Description:  
+Number of sold cigarettes per càpita in 43 estates and Columbia district in 1960 including number of death per 100.000 inhabitants due to cancer. 
+Number of observations: 44  
+
+Variables:  
+  1.  CIG = Number of cigarrettes (hundreds per capita)  
+  2.  BLAD = Deaths per 100K inhabitants - Blad cancer
+  3.  LUNG = Deaths per 100K inhabitants - Lung cancer   
+  4.  KID = Deaths per 100K inhabitants - Kidney cancer
+  5.  LEUK = Deaths per 100K inhabitants  - Leukemia  
+
+  
+First, data loading:
+```{r tabac}
+df<-read.table("smokCancer.csv",header=T,sep=";",dec=",")
+summary(df)
+```
+
+Univariate analysis of the data:
+
+```{r}
+rownames(df) <- abbreviate(df[,1], method ="both.sides") # Rownames definition
+boxplot(df[,c(3:6, 2)])
+Boxplot(df$CIG, id=list(n=3, labels=row.names(df))) # Univariate outliers detection of the number of sold cigarretes
+Boxplot(df$LUNG, id=list(n=Inf, labels=row.names(df)))
+df$STATE <- NULL
+```
+
+What is the linear correlation between pairs of variables?
+
+```{r}
+cor(df) #Linear correlations between pairs of variables. Note: 0.69 between CIG and LUNG and between CIG and BLAD.
+plot(df)
+```
+
+
+First linear estimation: Does the number of lung cancer deaths depend on the number of sold cigarretes?
+
+```{r}
+attach(df)
+# Can we see a linear relation between these two variables?
+plot(CIG, LUNG, col = "green", pch=19)
+abline(lsfit(CIG, LUNG), col ="green")
+text(CIG, LUNG, labels=row.names(df), adj=1.5, col="grey30")
+
+m2 <- lm(LUNG~CIG, data=df)
+summary(m2)
+
+coef(m2)
+```
+
+Where can we find the data which assess the following hypothesis test:
+
+$$H_0: \beta_2 = 0 \\ H_1: \beta_2 \neq 0 $$
+```{r}
+#Hint:
+2*pt(6.306, 42, lower.tail = FALSE)
+```
+
+Is the reduction in the sum of squares significant due to the inclusion of the variable CIG in the analysis?
+
+```{r}
+anova(m2) # Check for the p-value associated with the F statistic
+```
+
+What about the residual analysis on the linear model estimated?
+
+```{r}
+residuals = resid(m2)
+
+par(mfrow=(c(2,2)))
+plot(m2, id.n = 5)
+
+
+par(mfrow=c(1,1))
+Boxplot(rstudent(m2), labels=row.names(df)) #Any outliers on the residuals?
+```
+
+Are there any influential observations on the linear model estimated?
+
+```{r}
+influenceIndexPlot(m2, id.n=5)
+```
+
+Does the model estimated fit the data accordingly?
+
+```{r}
+marginalModelPlots(m2, id.n=5)
+residualPlots(m2, id=list(method="noteworthy", n=3))
+```
+
+Do we need to apply a transformation to my response variable?
+
+```{r}
+boxcox(LUNG~CIG, data=df)
+m3 <- lm(log(LUNG)~CIG, data=df)
+summary(m3)
+par(mfrow=c(2,2))
+plot(m3) #It seems that we are not significantly better than before
+```
+
+Do we need to apply any type of transformation to my explanatory variables?
+
+```{r}
+library(MASS)
+boxTidwell(LUNG~CIG, data=df) #Not significant transformation -> p-value higher than 0.05
+```
+
+Imagine that we would like to add the variable KID in the analysis, would it need any transformation? It can be checked using the following method:
+
+```{r}
+maux <- lm(LUNG~boxCoxVariable(KID)+CIG, data=df) #Not significant at a 0.05 significance level
+summary(maux)
+```
+
+Do we need to add the square of the explanatory variable in the linear model?
+
+```{r}
+m22 <- lm(LUNG~poly(CIG, 2), data=df)
+summary(m22)
+```
+
+Does the model fit the data?
+
+```{r}
+marginalModelPlots(m22, id.n = 5)
+```
+
+What about the residuals and the influential observations?
+
+```{r}
+residualPlots(m22)
+influencePlot(m22)
+```
+
+Do we need to exclude any of the observations from the analysis (because they are influential observations)?
+
+```{r}
+influenceIndexPlot(m22) #NE?
+llev <- which(hatvalues(m22)>3*(3/44))
+llout <- Boxplot(cooks.distance(m22))
+```
+
+It is pretty clear that the observation 25 (NE) is an influential observation:
+
+```{r}
+m23 <- lm(LUNG~poly(CIG, 2), data = df[-25,])
+summary(m23) #we lost the significance on the square of the cigarretes explanatory variable
+marginalModelPlots(m23)
+residualPlots(m23)
+influenceIndexPlot(m23)
+```
+
+New model:
+
+```{r}
+m24 <- lm(LUNG~CIG, data = df[-25,])
+summary(m24)
+marginalModelPlots(m24)
+residualPlots(m24)
+influenceIndexPlot(m24)
+par(mfrow=c(2,2))
+plot(m24) # Not influential observations, although, we have not found a perfect linear model.
+```
+
+
+# Aliments
+
+```{r tabac}
+df<-read.table("Aliments.csv",header=T,sep=";",dec=",")
+par(mfrow=c(1,1))
+boxplot(df[,c(3:6, 2)])
+
+plot(df) #Difficult to see something
+```
+
+First analysis: profiling on my target
+
+```{r}
+library(FactoMineR)
+res.con <- condes(df[,2:9], 1)
+res.con$quanti
+```
+
+We could also plot scatterplots between pairs of variables:
+
+```{r}
+attach(df)
+plot(Proteines, Kcalories) #...
+```
+
+Do all the variables affect to the number of calories of the food?
+
+```{r}
+m1 <- lm(Kcalories~., data = df[,2:9])
+summary(m1)
+```
+
+What about the residuals?
+
+```{r}
+par(mfrow=c(2,2))
+plot(m1)
+marginalModelPlots(m1)
+residualPlots(m1)
+par(mfrow=c(1,1))
+residualPlot(m1) #Not bad
+```
+
+It seems that we should remove some of the variables. Let's test it:
+
+```{r}
+m11 <- step(m1, direction="backward",data=df[,2:9])
+summary(m11)
+```
+
+Check the residuals now:
+
+```{r}
+par(mfrow=c(2,2))
+plot(m11)
+marginalModelPlots(m11)
+residualPlots(m11) # It is tested whether the squared of the variable is significant or not
+par(mfrow=c(1,1))
+residualPlot(m11) #Better than before
+```
+
+Lastly, what about if there are a posteriori  influential observations?
+
+```{r}
+Boxplot(cooks.distance(m11))
+llout <- which(cooks.distance(m11)>2*(sqrt(nrow(df))))
+llout #There are no a posteriori influential observations
+
+# A priori influential observations?
+llev <- which(hatvalues(m11)>3*(length(coef(m11))/nrow(df)))
+llev #There are a priori influential observations
+
+```
+
+
+# Prestige
+
+```{r}
+Prestige
+df<-Prestige
+```
+

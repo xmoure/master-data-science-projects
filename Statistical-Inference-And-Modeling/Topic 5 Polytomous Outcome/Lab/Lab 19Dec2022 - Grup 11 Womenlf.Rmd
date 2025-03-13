@@ -1,0 +1,259 @@
+---
+title: "Lab 12Dec2022 - Grup 11 Womenlf"
+author: "Lídia"
+date: '2022-12-12'
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+# Load libraries and set current directory
+
+```{r}
+# Clear plots
+if(!is.null(dev.list())) dev.off()
+
+# Clean workspace
+rm(list=ls())
+options(contrasts=c("contr.treatment","contr.treatment"))
+
+library(car)
+library(FactoMineR)
+library(lmtest)
+library(effects)
+library(AER)
+library(nnet)
+```
+
+# Womenlf
+
+```{r}
+load("Womenlf.RData")
+summary(womenlf)
+str(womenlf)
+df <- womenlf
+
+womenlf$bwork<-ifelse(womenlf$work=="not_work",0,1)
+womenlf$bwork<-factor(womenlf$bwork,labels=c("not_work","work"))
+```
+
+Binary model HL1
+
+```{r}
+hm1m0 <- glm( bwork ~ 1, family="binomial",data=womenlf)
+# Too big model
+hm1m9 <- glm( bwork ~ sons*income+sons*region, family="binomial",data=womenlf)
+step( hm1m9 )
+hm1m3 <- glm( bwork ~ sons+income, family="binomial",data=womenlf)
+summary(hm1m3)
+coef(hm1m3)
+exp(coef(hm1m3))
+100*(1-exp(-1.57564843))
+
+# odds(sons-present)= 0.2 odds(sons-absent)  or odds are reduced by 80% when sons-present all else being equal (ceteris paribus)
+
+# Interpretation in the probability scale
+
+propsample <- prop.table(table(womenlf$bwork));propsample
+0.5893536*0.4106464 *coef(hm1m3)[2]
+
+# income
+# odds scale interpration?
+coef(hm1m3)[3]
+exp(coef(hm1m3)[3])
+100*(1-exp(coef(hm1m3)[3]))
+0.5893536*0.4106464 *coef(hm1m3)[3]
+```
+
+# Polytomous factor
+
+## Nominal proposal
+
+```{r}
+library(nnet)
+mm0 <- multinom(work ~ 1, data=womenlf, weights=ones) # Null model
+summary( mm0 )
+mm3 <- multinom(work ~ sons+income, data=womenlf, weights=ones)
+summary( mm3 )
+
+coef(mm3)
+
+exp(coef(mm3))
+# Odds scale PT vs NW 
+100*( exp(coef(mm3)[1,2:3])-1)
+# Odds scale FT vs NW 
+exp(coef(mm3)[2,2:3])
+100*(1-exp(coef(mm3)[2,2:3]))
+```
+
+## Interpretation and prediction of probabilities
+
+```{r}
+# Interpret sons-Absent and income on the mean
+mean(womenlf$income)
+mm3c <- multinom(work ~ sons+I(income-14.75665), data=womenlf, weights=ones)
+summary( mm3c )
+
+lopPT <- coef(mm3c)[1,1];lopPT
+lopFT <- coef(mm3c)[2,1];lopFT
+opPT <- exp(lopPT);opPT
+opFT <- exp(lopFT);opFT
+pNW <- (1/(1+opPT+opFT));pNW
+pPT <- opPT * pNW; pPT
+pFT <- opFT * pNW; pFT
+pFT + pPT + pNW
+
+
+predict(mm3,type="probs",newdata=data.frame(sons="absent",income=14.75665))
+predict(mm3,type="class",newdata=data.frame(sons="absent",income=14.75665))
+
+### Accuracy of the mm3
+tt<-table(predict(mm3),womenlf$work);tt
+100*sum(diag(tt))/sum(tt)
+
+```
+
+## Ordinal
+
+```{r}
+library(MASS)
+om0 <- polr(work ~ 1, data=womenlf, weights=ones)
+om9 <- polr(work ~ sons*income+sons*region, data=womenlf, weights=ones)
+om3 <- step(om9)
+summary(om0)
+summary(om3)
+
+predict(om3,type="probs",newdata=data.frame(sons="absent",income=14.75665))
+
+# Predict probabilities sons-absent and income on the mean. Use the trick om3c
+om3c <- polr(work ~ sons+I(income-14.75665), data=womenlf, weights=ones)
+summary(om3c)
+
+om3c$zeta  
+
+clogodd1<-om3c$zeta[1];clogodd1 # linear predictors!
+clogodd2<-om3c$zeta[2];clogodd2
+
+gam1<-exp(clogodd1)/(1+exp(clogodd1));gam1
+gam2<-exp(clogodd2)/(1+exp(clogodd2));gam2
+
+pNW <- gam1;pNW
+pPT <- gam2-gam1;pPT
+pFT <- 1-gam2;pFT
+pNW;pPT;pFT
+```
+
+## Hierarchical Modelling
+
+HL1 is already done at the begining
+
+```{r}
+# HL1
+hm1m9 <- glm( bwork ~ sons*income+sons*region, family="binomial",data=womenlf)
+step( hm1m9 )
+
+summary(womenlf)
+hm1m3 <- glm( bwork ~ sons+income, family="binomial",data=womenlf)
+summary(hm1m3)
+
+summary(womenlf)
+
+#HL2
+hm2m9 <- glm( work ~ sons*income+sons*region, family="binomial",data=womenlf[womenlf$bwork=="work",])
+hm2m3<-step( hm2m9 )
+anova(hm2m3,hm2m9,test="Chisq")
+
+# Best option
+# Akaike stat. Hierarchical proposal
+BIC(hm1m3) + BIC(hm2m3)
+# AIC best nominal, best ordinal and best HL*
+BIC(mm3,om3)
+
+AIC(hm1m3)+AIC(hm2m3)
+AIC(mm3,om3)
+
+## Predictive capacity
+# Nominal proposal
+ttn <- table(predict(mm3),womenlf$work);ttn
+100*sum(diag(ttn))/sum(ttn)
+tto <- table(predict(om3),womenlf$work);tto
+100*sum(diag(tto))/sum(tto)
+
+#HL
+table( ifelse(predict(hm1m3,type="response")>0.5,"pwork","pnotwork"),womenlf$bwork)
+table(factor(ifelse(predict(hm2m3,type="response")<0.5,"pparttime","pfulltime"),levels=c("pparttime","pfulltime")),womenlf$work[womenlf$work!="not_work"])
+100*(132+33+55)/263
+
+# prediction HL proposal
+
+eta1<- coef(hm1m3)[1]+coef(hm1m3)[3]*14.76; eta1
+pproW <- exp(eta1)/(1+exp(eta1)); pproW
+pproNW <- 1- pproW;pproNW
+
+coef(hm2m3)
+eta2<- coef(hm2m3)[1]+coef(hm2m3)[3]*14.76; eta2
+pproFcW <- exp(eta2)/(1+exp(eta2)); pproFcW
+pproPcW <- 1- pproFcW;pproPcW
+
+pproPT<- pproW * pproPcW;pproPT
+
+pproFT<-pproW * pproFcW;pproFT
+pproNW + pproPT + pproFT
+
+predict( hm1m3, newdata=data.frame(sons="absent",income=14.76), type="response")
+predict( hm2m3, newdata=data.frame(sons="absent",income=14.76), type="response")
+```
+
+
+# Cheese tasting
+
+```{r}
+load("C:/Users/lidia.montero/Downloads/cheese.RData")
+
+om0 <- polr( c.taste ~ 1, data = cheese, weights=y )
+om1 <- polr( c.taste ~ additive, data = cheese, weights=y )
+
+summary( om0 )
+summary( om1 )
+
+# In om1  probabilities of 1, 2, ... 9 when using Add A
+
+codds <- exp(om1$zeta); codds
+# Reverse function
+
+cprob <- codds/(1+codds);cprob
+diff(c(0,cprob,1))
+
+
+# In om1  probabilities of 1, 2, ... 9 when using Add D
+
+eta <- om1$zeta - 1.613
+codds <- exp(eta); codds
+# Reverse function
+cprob <- codds/(1+codds);cprob
+diff(c(0,cprob,1))
+
+om1p <- polr( c.taste ~ additive, data = cheese, method="probit",weights=y )
+om1cg <- polr( c.taste ~ additive, data = cheese, method="cloglog",weights=y )
+anova( om0 , om1, test="Chisq")
+summary(om1)
+summary(om1p)
+summary(om1cg)
+
+AIC( om1, om1p, om1cg )
+
+om1p$zeta
+cpA <- c(0,pnorm(om1p$zeta),1); cpA
+pA<-diff(cpA);pA
+
+om1p$coef
+om1p$zeta - om1p$coef[3]
+cpD <- c(0,pnorm(om1p$zeta - om1p$coef[3]),1); cpD
+pD<-diff(cpD);pD
+
+# Visualització Ordinal
+library(effects)
+cex=0.5
+plot(Effect(focal.predictors = c("additive"), om1,cex=0.5))
+```
+

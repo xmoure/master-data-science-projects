@@ -1,0 +1,154 @@
+---
+title: "Lab Session Nov 7 2022 11"
+author: "Lídia"
+date: '2022-11-07'
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r}
+library(car)
+library(effects)
+library(AER)
+data("CPS1985")
+df <- CPS1985
+summary(df)
+```
+
+Modelling
+
+```{r}
+m0 <- lm( wage ~ education + experience + age, data=df )
+summary( m0 )
+
+cor(df[,1:4])
+vif( m0 )
+
+m1 <- lm( wage ~ education + experience, data=df )
+summary( m1 )
+
+par( mfrow = c(2,2))
+plot( m1, id.n=0 )
+par( mfrow = c(1,1))
+
+library(MASS)
+boxcox( wage ~ education + experience, data=df )
+
+# boxcox( log(wage) ~ education + experience, data=df )
+
+boxTidwell( log(wage) ~ education + I(experience+0.5), data=df )
+
+```
+
+Applying transformations
+
+```{r}
+m2 <- lm( log(wage) ~ I(education^2) + log(I( experience+ 0.5)), data=df )
+summary( m2 )
+
+scatter3d( log(wage) ~ I(education^2) + log(I( experience+ 0.5)), data=df )
+library(effects)
+plot(allEffects( m2 ))
+
+par( mfrow = c(2,2))
+plot( m2, id.n=0 )
+par( mfrow = c(1,1))
+# boxplot(resid(m2))
+
+residualPlots( m2 )
+```
+
+Adding factors
+
+```{r}
+names(df)
+m3 <- lm(log(wage) ~ I(education^2) + log(I( experience+ 0.5)) + ethnicity + region + gender + occupation + sector + union + married , data=df)
+
+summary(m3)
+Anova( m3 )
+
+m3occ <- lm(log(wage) ~ I(education^2) + log(I( experience+ 0.5)) + ethnicity + region + gender + sector + union + married , data=df)
+anova(m3occ, m3)
+
+m4 <- step( m3 )
+
+par( mfrow = c(2,2))
+plot( m3, id.n=0 )
+par( mfrow = c(1,1))
+# boxplot(resid(m2))
+
+```
+
+redefining factors
+
+```{r}
+
+# New categorical variables can be extracted from the actual ones?
+df$sectother<-0
+ll<-which(df$sector=="other")
+df$sectother[ll]<-1
+df$sectother <- factor( df$sectother, labels=c("SecOth-No","SecOth-Yes"))
+table(df$occupation)
+
+df$f.occ<-0
+ll<-which(df$occupation %in% c("technical","management"))
+df$f.occ[ll]<-1
+df$f.occ <- factor( df$f.occ, labels=c("f.occ-Base","f.occ-TeMn"))
+
+df$f.cauc<-0
+ll<-which(df$ethnicity %in% c("cauc"))
+df$f.cauc[ll]<-1
+df$f.cauc <- factor( df$f.cauc, labels=c("f.cauc-No","f.cauc-Yes"))
+
+```
+
+Recalculate model
+
+```{r}
+m5 <- lm( log(wage) ~ I(education^2) + log(I( experience+ 0.5)) + f.cauc + region + gender + f.occ + sectother + union , data=df )
+summary(m5)
+
+AIC(m3,m4,m5)  # Comparison of any models - using the same target
+AIC(m1,m3,m4,m5)  # Not correct m1 does not contain log target transformation
+
+# m4 and m5 are nested. m5 is nestd into m4
+
+anova(m5,m4)  # H0 can not be rejected
+
+library(effects)
+plot(allEffects(m5))
+```
+
+Next step . Adding interactions
+
+```{r}
+m6 <- lm( log(wage) ~ (I(education^2) + log(I( experience+ 0.5))) * (f.cauc + region + gender + f.occ + sectother + union) , data=df )
+summary(m6)
+
+m7 <- step( m6 ) # Monitoring by AIC
+m8 <- step( m6, k=log(nrow(df)) ) # Monitoring by BIC
+
+plot(allEffects(m8))
+```
+
+Residual Analysis and Validation
+
+```{r}
+residualPlots( m8 )
+influencePlot( m8 )
+
+ll<-which(rownames(df) %in% c("170","199"));ll
+
+m9 <- lm( log(wage) ~ (I(education^2) + log(I( experience+ 0.5))) * (f.cauc + region + gender + f.occ + sectother + union) , data=df[-ll,] )
+summary(m9)
+
+m10 <- step( m9 ) # Monitoring by AIC
+m11 <- step( m9, k=log(nrow(df)) ) # Monitoring by BIC
+
+plot(allEffects(m11))
+
+residualPlots( m11 )
+df[ll,]
+```
+

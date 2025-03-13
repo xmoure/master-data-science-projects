@@ -1,0 +1,456 @@
+---
+title: "LabSession_6"
+author: "Lidia"
+date: "Monday, November 21st, 2022"
+output: word_document
+editor_options: 
+  chunk_output_type: console
+---
+
+## Prepare Dataset and load packages
+```{r}
+# Clear plots
+if(!is.null(dev.list())) dev.off()
+
+# Clean workspace
+rm(list=ls())
+
+load("Elections_92.RData")
+options(contrasts=c("contr.treatment","contr.treatment")) #Baseline category reparametrization
+library(car)
+library(MASS)
+library(AER)
+library(effects)
+library(lmtest)
+library(FactoMineR)
+library(DescTools)
+library(ResourceSelection)
+library(statmod)
+library(cvAUC)
+```
+
+# Point 1: Exploratory Data Analysis
+
+```{r}
+# Feature Selection
+summary(elecc92)
+catdes(elecc92[,-1],9) #No inclusion of id as it is the unique identifier
+```
+
+# Point 2: Aggregated vs Disaggregated data for binary response models
+
+## Disaggregated data point of view
+
+```{r}
+m1 <- glm(pres~age,data=elecc92,family=binomial) 
+summary(m1)
+# You must check the plots of the glm residuals. Although, it is not as important as for linear models: 
+residualPlots(m1)
+marginalModelPlots(m1)
+# Manual diagnostic plot using dfage aggregated dataset
+
+# Point 2a:
+par(mfrow=c(1,1))
+elecc92$olog <- log((elecc92$pres+0.05)/(1-elecc92$pres+0.05))
+plot(elecc92$age,elecc92$olog,pch=19,col="grey70")
+lines(lowess(elecc92$age,elecc92$olog,f=0.5),col="blue",lwd=2)
+lines(elecc92$age,m1$linear.predictor,col="red",lwd=2)
+lines(elecc92$age,m1$fitted.values,col="grey",lwd=2)
+```
+
+Aggregated data point of view: dfage
+
+```{r}
+summary(dfage)
+m1a <-glm(cbind(ypos,yneg)~age,data=dfage,family=binomial)
+summary(m1a)
+
+# Goodness of fit: How my model fits the data.
+
+1-pchisq(m1a$dev,m1a$df.res)  # Aggregated data model
+1-pchisq(m1$dev,m1$df.res)
+# If the p-value were lower than 0.05 (significance level), H0 should be rejected. Thus, the model would not fit the data.  
+
+# Interpret age effect in m1
+exp(0.013491) #Increment 1 year - Odd scale
+exp(0.13491) #Increment 10 years
+paste0("% increment on the probability: ", (exp(0.013491)-1)*100)
+
+# 1 year increment: (exp(0.013491)-1)*100% as the percentual increment
+
+residualPlots(m1a) #P-value: Is the quadratic term significant?
+avPlots(m1a)
+```
+
+Let's check the fit using a manual plot and also residual analysis methods available in package car 
+
+```{r}
+# Manual diagnostic plot using dfage aggregated dataset
+# 
+par(mfrow=c(1,1))
+dfage$olog <- log((dfage$ypos+0.5)/(dfage$yneg+0.5))
+# Same approach as before but, in this case, you can see that there is more variation because the values are more dispersed. 
+plot(dfage$age,dfage$olog,pch=19,col="grey70")
+# It seems that the age between 40-70 is the age where the probability of voting is higher
+lines(lowess(dfage$age,dfage$olog,f=0.5),col="blue",lwd=2)
+lines(dfage$age,m1a$linear.predictor,col="red",lwd=2)
+lines(dfage$age,m1a$fitted.values,col="grey",lwd=2)
+
+
+# library(car)
+scatterplot(dfage$olog~dfage$age) #Same conclusion as before
+
+# library(effects)
+plot(allEffects(m1a),ask=FALSE)
+residualPlots(m1a, layout=c(1, 2))
+avPlots(m1a,id=list(labels=row.names(dfage), n=5)) #How age affects to the number of positive voters
+outlierTest(m1a) #Based Studentized residuals in linear (t-tests)
+influenceIndexPlot(m1a,id=list(n=5),vars=c("Cook", "Student","hat"))
+influencePlot(m1a,id=list(method="noteworthy", n=5)) #A priori and a posteriori influential observations
+#It seems pretty clear that observation 57 should be considered an outlier
+```
+
+## Point 3
+
+```{r}
+m2 <- glm(pres~age+I((age-42)^2),data=elecc92,family=binomial) #Normalization by subtracting the median: robust approach for normalization
+m3 <- glm(pres~age+I((age-42)^2)+I((age-42)^3),data=elecc92,family=binomial)
+anova(m2,m3,test="Chisq") #We are not better than before (P-value higher than 0.05). The reduction in deviance is not significant. 
+anova(m1,m2,test="Chisq") #In this case, the reduction in the deviance is significant
+
+m2p <- glm(pres~poly(age,2),data=elecc92,family=binomial)
+m3p <- glm(pres~poly(age,3),data=elecc92,family=binomial)
+summary(m3p)
+plot(allEffects(m2p),ask=FALSE)
+residualPlots(m2p)
+marginalModelPlots( m2p )
+
+summary(m2p)
+m2a <-glm(cbind(ypos,yneg)~age+I((age-42)^2),data=dfage,family=binomial)
+m2ap <-glm(cbind(ypos,yneg)~poly(age,2),data=dfage,family=binomial)
+m3a <-glm(cbind(ypos,yneg)~age+I((age-42)^2)+I((age-42)^3),data=dfage,family=binomial)
+summary(m3a)
+anova(m2a,m3a,test="Chisq")
+anova(m1a,m2a,test="Chisq")
+
+AIC(m3,m2,m1)# Min AIC: 2652.6 #Lowest AIC, the better
+stats::step(m3,k=log(nrow(elecc92))) #It seems pretty clear that the third degree age should not happen
+
+AIC(m3a,m2a,m1a)  # Warning: grouping consistency should be guaranteed
+stats::step(m3a)
+
+marginalModelPlots(m2p,id=list(labels=row.names(elecc92), n=5)) 
+avPlots(m2p,id=list(labels=row.names(elecc92), n=5))
+avPlots(m2ap,id=list(labels=row.names(dfage), n=5))
+
+residualPlots(m2p, layout=c(1, 2))
+residualPlots(m2ap, layout=c(1, 2))
+outlierTest(m2p)
+influenceIndexPlot(m2p,id=list( n=5))
+influenceIndexPlot(m2ap,id=list( n=5))
+
+# library(lmtest)
+# These are the tests to contrast whether the reduction in deviance is significant or not
+waldtest(m1, m2, test = "Chisq") # Wald Test
+waldtest(m2, m3, test = "Chisq") # Wald Test
+
+waldtest(m1a, m2a, test = "Chisq") # Wald Test
+waldtest(m2a, m3a, test = "Chisq") # Wald Test
+```
+
+## Point 4
+
+```{r}
+######
+summary(elecc92)
+
+m1c <- glm(pres~c.age,data=elecc92,family=binomial)
+summary(m1c)
+
+# Interpret 40 to 59 age group
+# 
+exp( 0.83446 );100*(exp( 0.83446 ) -1)
+# Remember that it must be interpreted in terms of the baseline category
+
+residualPlots(m1c , layout=c(1, 2))
+marginalModelPlots(m1c,id=list(n=5))
+```
+
+## Point 5
+
+```{r}
+m1c <- glm(pres~c.age,data=elecc92,family=binomial)
+AIC(m1,m2,m3,m1c)# Min AIC: 2652.608 m2 
+# The AIC has not reduced
+```
+
+## Point 6
+
+```{r}
+m4  <-glm(pres~ poly(age,2)+poly(educ,3),data=elecc92,family=binomial)
+m4r  <-glm(pres~ poly(age,2)+poly(educ,2),data=elecc92,family=binomial)
+summary(m4)
+
+residualPlots(m4 , layout=c(2, 2))
+marginalModelPlots(m4,id=list(n=5))
+plot(allEffects(m4),ask=FALSE)
+avPlots(m4,id=list(labels=row.names(elecc92), n=5))
+Anova(m4, test="LR") #This is the net effects test
+anova(m4, m4r, test = "Chisq")
+AIC(m4, m4r)
+```
+
+## Point 7
+
+```{r}
+m5 <-glm(pres~poly(age,2)+c.edu,data=elecc92,family=binomial)
+m6 <-glm(pres~poly(age,2)*c.edu,data=elecc92,family=binomial)
+
+plot(allEffects(m6),ask=FALSE)
+
+anova( m5, m6, test="Chisq")
+#library(lmtest)
+waldtest(m5,m6,test='Chisq')
+
+marginalModelPlots(m6) 
+residualPlots(m6)
+```
+
+## Point 8:
+
+```{r}
+AIC(m4,m5,m6) #Interesting; Lowest AIC happens when education is included as a factor and interactions with the covariates are also included in the model. 
+```
+
+## Party Preferences
+
+```{r}
+elecc92$party <- as.factor(paste(elecc92$p,elecc92$arty))
+table(elecc92$party)
+m7<- glm(pres ~ poly(age,2)*c.edu+party, family=binomial, data=elecc92)
+summary(m7) #ind dem is your target
+
+# Grouping levels
+plot(vote~party,data=elecc92)
+partit <- rep("weak",length(elecc92$party))
+# We can difference three groups of voters regarding the political preference:
+# independent: ind ind
+# strong: strong dem and strong rep
+# weak: ind rep, weak dem and weak rep
+partit[elecc92$party=="strong rep"|elecc92$party=="strong dem"] <- "strong"
+partit[elecc92$party=="ind ind"] <- "ind"
+partit <-ordered(partit,levels=c("ind","weak","strong"))
+newparty <-partit
+elecc92 <- data.frame(elecc92,newparty) #This automatically creates a column with this data created
+
+summary(elecc92)
+
+m8<- glm(pres ~ poly(age,2)*c.edu+newparty, family=binomial, data=elecc92)
+m9<- glm(pres ~ poly(age,2)*c.edu*newparty, family=binomial, data=elecc92)
+summary(m8)
+Anova( m8, test="LR")
+Anova( m9, test="LR")
+anova( m8, m9, test="Chisq")
+waldtest(m8,m9, test="Chisq")
+
+anova(m8,m7, test="Chisq")
+AIC(m8,m7,m9)
+
+plot(allEffects(m8),ask=FALSE)
+# We will continue with m8 which seems to be the model which has the necessary information
+```
+
+# Point 10: Interest in the elections
+
+```{r}
+options(contrasts=c("contr.treatment","contr.treatment"))
+m10<- glm(pres ~ poly(age,2)*c.edu+newparty+inter, family=binomial, data=elecc92)
+m10i<- glm(pres ~(poly(age,2)*c.edu+newparty)*inter, family=binomial, data=elecc92)
+
+anova( m10, m10i, test="Chisq")
+waldtest( m10, m10i, test="Chisq" )
+AIC( m8, m10, m10i )
+
+plot(allEffects(m10),ask=F)
+
+# Test de Wald
+summary( m10 )
+waldtest( m8, m10, test="Chisq") # It is pretty clear that the variable interest is providing important information to the model
+beta <- as.numeric(m10$coe[9:10]);beta # test de Wald
+library(MASS)
+V <- vcov(m10)[9:10,9:10] # Var-Cov Matrix Estimates
+Wald <- beta%*%solve(V)%*%beta; Wald # Wald Statistic analytically calculated
+```
+
+## Point 11: interaCtion interest and new party preferences
+
+```{r}
+# An interaction between interest and political party preference can happen...
+m11 <- update(m10,~.+inter:newparty) #Interesting usage of update function.
+summary(m11)
+anova(m10, m11,test="Chisq")
+waldtest(m10, m11,test="Chisq") # Not worth
+```
+
+## Point 12: Close results
+
+```{r}
+m12 <- update(m10,~.+close)
+summary(m12)
+anova(m10, m12,test="Chisq")
+waldtest(m10, m12,test="Chisq") #It makes no sense to include close variable to the analysis
+```
+
+## Point 13: Satisfaction with candidatures
+
+```{r}
+m13 <- update(m10,~.+sat)
+summary(m13)
+anova(m10,m13, test="Chisq")
+
+Anova( m13, test="LR") #It makes no sense to include satisfaction variable to the analysis
+```
+
+## Point 14 - Split data into work and test
+
+```{r}
+set.seed(1234)
+llwork <- sample(1:nrow(elecc92),round(0.8*nrow(elecc92),dig=0))
+dfwork <- elecc92[llwork,]
+dftest <- elecc92[-llwork,]
+
+m14<- glm(pres ~ (poly(age, 2) * c.edu + newparty)*(inter+close+sat), family=binomial, data=dfwork)
+m15 <- step(m14, k=log(nrow(dfwork)))
+m16 <- step(m14)
+Anova(m15, test="LR")
+Anova(m16, test="LR")
+
+anova(m15, m16, test="Chisq")
+summary(m15)
+
+# Diagnostics
+
+marginalModelPlots(m15,id=list(labels=row.names(elecc92),method=abs(cooks.distance(m15)), n=5) )
+
+avPlots(m15,id=list(labels=row.names(elecc92),method=abs(cooks.distance(m15)), n=5) )
+
+crPlots(m15,id=list(labels=row.names(elecc92),method=abs(cooks.distance(m15)), n=5) )
+
+residualPlots(m15, layout=c(3, 2))
+outlierTest(m15)
+llnrem<-influencePlot(m15,id=list(n=3) );llnrem
+
+# matplot(dfbetas(m15),type='l')
+# abline(h=sqrt(4/(dim(elecc92)[1])),lty=3,col=6)
+# abline(h=-sqrt(4/(dim(elecc92)[1])),lty=3,col=6)
+# lines(sqrt(cooks.distance(m15)),lwd=3,col=1)
+# legend(locator(n=1),legend=c(names(as.data.frame(dfbetas(m15))),"Cook D"), col=c(1:3,1), lty=c(3,3,3,1) )
+
+llistal<-Boxplot(hatvalues(m15), id.n=10)
+abline(h=4*length(coef(m15))/nrow(dfwork))
+hatvalues(m15)[llistal]
+
+llistac<-Boxplot(cooks.distance(m15), id=list(labels=rownames(dfwork)))
+cooks.distance(m15)[llistac]
+elecc92[llistac,]
+llrem <- which( rownames(dfwork) %in% c("913","951"));llrem
+
+dfwork <- dfwork[-llrem,]
+m15<- glm(pres ~ poly(age, 2) + c.edu + newparty+inter, family=binomial, data=dfwork )
+```
+
+# Point 15: Forecasting capability of the final model
+
+```{r}
+elecc92.fin <- m15
+prob.vot <- elecc92.fin$fit
+pres.est <- ifelse(prob.vot<0.5,0,1)
+tt <- table(pres.est,dfwork$pres)
+sum(diag(table(pres.est,dfwork$pres)))/(dim(dfwork)[1])
+precision <- tt[2,2]/(tt[2,2] +tt[2,1] );precision
+recall <- tt[2,2]/(tt[2,2] +tt[1,2] );recall
+f1 <-2*((precision*recall)/(precision+recall)); f1
+
+# Model na?ve
+m0<-glm(pres ~ 1, family=binomial, data=dfwork)
+prob.vot0 <- m0$fit
+pres.est0 <- ifelse(prob.vot0<0.5,0,1)
+tt0 <- table(pres.est0,dfwork$pres)
+tt0
+table(pres.est0,dfwork$pres)[1,2]/(dim(dfwork)[1])
+precision0 <- tt0[1,2]/(tt0[1,2] +tt0[1,1] );precision0
+recall0 <- tt0[1,2]/(tt0[1,2] +0 );recall0
+f10 <-2*((precision0*recall0)/(precision0+recall0)); f10
+
+library(rms)
+model.final <- lrm(pres ~ poly(age, 2) + c.edu + newparty + inter,  data=dfwork)
+model.final
+
+library(fmsb)
+NagelkerkeR2(m15)
+summary(m15)
+100*(1-m15$dev/m15$null.dev)
+
+library(DescTools)
+PseudoR2(elecc92.fin, which='all') # Not working for grouped data
+# Sheather
+1 - (elecc92.fin$deviance / elecc92.fin$null.deviance)
+# McFadden
+1-(as.numeric(logLik(elecc92.fin))/as.numeric(logLik(m0)))
+
+library(ResourceSelection)
+hoslem.test(dfwork$pres, fitted(elecc92.fin))
+
+# Estadístic de Hosmer-Lemershow
+# seque<-c(seq(0,1,by=0.1));seque  # Original proposal
+seque<-quantile(fitted(m15),probs=seq(0,1,by=0.1))
+fitgrup<-cut(fitted(m15),breaks=seque)
+cfitgrup<-table(dfwork$pres,fitgrup);cfitgrup
+cmodel1<-tapply(fitted(m15),fitgrup,sum);cmodel1
+cmodel0<-tapply(1-fitted(m15),fitgrup,sum);cmodel0
+cmodelgrup <- rbind(cmodel0,cmodel1);cmodelgrup
+XHL<-sum(((cfitgrup-cmodelgrup)^2)/cmodelgrup);XHL
+dfXHL<-8
+1-pchisq(XHL,dfXHL)
+
+library("ROCR")
+dadesroc<-prediction(predict(m15,type="response"),dfwork$pres)
+par(mfrow=c(1,2))
+plot(performance(dadesroc,"err"))
+plot(performance(dadesroc,"tpr","fpr"))
+abline(0,1,lty=2)
+
+library(cvAUC)
+AUC(predict(m15,type="response"),dfwork$pres)
+
+```
+
+# Point 15: Forecasting capability of the final model. Test sample
+
+```{r}
+# It assumes sample split into dfwork and dftest
+# Definition of new party
+dftest$party <- as.factor(paste(dftest$p,dftest$arty))
+summary(as.factor(c(dftest$p,dftest$arty)))
+# Grouping levels
+partit <- rep("weak",length(dftest$party))
+partit[dftest$party=="strong rep"|dftest$party=="strong dem"] <- "strong"
+partit[dftest$party=="ind ind"] <- "ind"
+newparty <-factor(partit,levels=c("ind","weak","strong"))
+dftest <- data.frame(dftest,newparty)
+
+elecc92.fin <- m15
+prob.vot <- predict(elecc92.fin, newdata=dftest, type="response")
+pres.est <- ifelse(prob.vot<0.5,0,1)
+table(pres.est,dftest$pres)
+sum(diag(table(pres.est,dftest$pres)))/dim(dftest)[1]
+# Model na?ve
+m0<-glm(pres ~ 1, family=binomial, data=dftest)
+prob.vot0 <- m0$fit
+pres.est0 <- ifelse(prob.vot0<0.5,0,1)
+table(pres.est0,dftest$pres)
+table(pres.est0,dftest$pres)[1,2]/dim(dftest)[1]
+
+library(ResourceSelection)
+hoslem.test(dftest$pres, prob.vot)
+```

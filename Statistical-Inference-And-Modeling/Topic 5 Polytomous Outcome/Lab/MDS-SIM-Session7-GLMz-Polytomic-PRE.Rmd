@@ -1,0 +1,847 @@
+---
+title: "LAB Session 7 - Polytomic Outcome"
+author: "Lídia Montero"
+date: "28 Nov 2022"
+output: word_document
+editor_options: 
+  chunk_output_type: console
+---
+
+# Load libraries and set current directory
+
+```{r}
+# Clear plots
+if(!is.null(dev.list())) dev.off()
+
+# Clean workspace
+rm(list=ls())
+options(contrasts=c("contr.treatment","contr.treatment"))
+
+library(car)
+library(FactoMineR)
+library(lmtest)
+library(effects)
+library(AER)
+library(nnet)
+library(MNLpred)
+library(ggplot2)
+library(scales)
+```
+
+# Womenlf
+
+```{r}
+load("Womenlf.RData")
+summary(womenlf)
+str(womenlf)
+df <- womenlf
+
+Boxplot(womenlf$income, id=list(n=4))
+intervals <- c(0,  5 ,10 ,15 ,20 ,25 ,30, 46)
+womenlf$gincome <- factor(cut(womenlf$income,breaks=intervals))
+table(womenlf$gincome)
+cintervals<- tapply(womenlf$income,womenlf$gincome,median)
+womenlf$ngincome<-factor(cut(womenlf$income,breaks=intervals))
+womenlf$ngincome<-factor(womenlf$ngincome,labels=cintervals)
+womenlf$ngincome<-as.numeric(levels(womenlf$ngincome))[womenlf$ngincome]
+
+womenlf$bwork<-ifelse(womenlf$work=="not_work",0,1)
+womenlf$bwork<-factor(womenlf$bwork,labels=c("not_work","work"))
+```
+
+# Point 2
+
+```{r}
+hm1m0 <- glm( bwork ~ 1, family="binomial",data=womenlf)
+hm1m1 <- glm( bwork ~ sons, family="binomial",data=womenlf)
+hm1m2 <- glm( bwork ~ income, family="binomial",data=womenlf)
+hm1m3 <- glm( bwork ~ sons + income, family="binomial",data=womenlf)
+hm1m4 <- glm( bwork ~ region, family="binomial",data=womenlf)
+hm1m5 <- glm( bwork ~ sons + region, family="binomial",data=womenlf)
+hm1m6 <- glm( bwork ~ sons * income, family="binomial",data=womenlf)
+hm1m7 <- glm( bwork ~ sons + region + income, family="binomial",data=womenlf)
+hm1m8 <- glm( bwork ~ region + sons*income, family="binomial",data=womenlf)
+hm1m9 <- glm( bwork ~ region + sons*poly(income,2), family="binomial",data=womenlf)
+
+hm1m1$null.dev - hm1m1$dev
+hm1m4$null.dev - hm1m4$dev
+hm1m2$null.dev - hm1m2$dev
+
+AIC(hm1m1,hm1m4,hm1m2, hm1m3,hm1m6) # hm1m3 325.7325
+step(hm1m9)
+anova(hm1m8, hm1m9, test="Chisq")
+plot(allEffects(hm1m3))
+
+# Interpreting model parameters
+summary(hm1m3)
+
+# Sons effect
+coef(hm1m3)
+exp(coef(hm1m3))
+100*(1-exp(coef(hm1m3))[2])
+# Having sons decreases the relative probability of working vs non_working by 79.31% all else being equal
+prop.table(table(womenlf$bwork))
+# In terms of probability 
+prop.table(table(womenlf$bwork))[1]*prop.table(table(womenlf$bwork))[2]*coef(hm1m3)[2]
+
+# Income effect: odds of working decrease for each year by 4.14% and in 0.01 probability units
+coef(hm1m3)[3]
+exp(coef(hm1m3))[3]
+100*(1-exp(coef(hm1m3))[3])
+prop.table(table(womenlf$bwork))[1]*prop.table(table(womenlf$bwork))[2]*coef(hm1m3)[3]
+```
+
+## Nominal models
+
+```{r}
+# Point 3
+mm0 <-multinom( work~1, data=womenlf,weight=ones )
+mm1 <-multinom( work~sons, data=womenlf,weight=ones )
+mm2 <-multinom( work~income, data=womenlf,weight=ones )
+mm4 <-multinom( work~region, data=womenlf,weight=ones )
+mm3 <-multinom(  work~sons+income, data=womenlf,weight=ones )
+mm5 <-multinom( work~sons+region,  data=womenlf,weight=ones )
+mm5i <-multinom( work~sons*region,  data=womenlf,weight=ones )
+mm6 <-multinom( work~sons*income,  data=womenlf,weight=ones )
+mm7 <-multinom( work~sons+region+income,  data=womenlf,weight=ones )
+mm8 <-multinom( work~region+sons*income, data=womenlf,weight=ones )
+
+mm0$dev - mm1$dev
+mm0$dev - mm3$dev
+mm0$dev - mm4$dev
+
+AIC(mm1,mm4,mm3) # mm3 434.8819
+anova(mm1,mm3,test="Chisq")
+
+summary(mm3)
+#       log( xxxxtime/not_work):
+#       logit 1: parttime vs not_work
+#       logit 2: fulltime vs not_work
+
+# residualPlots(mm3) # It does not work
+
+summary(df)
+mm3c <-multinom( work~ sons+I(income - mean(womenlf$income)), data=womenlf,weight=ones )
+summary(mm3c)
+
+exp(coef(mm3))
+# Interpret sons-Absent and income on the mean
+# logodd(PT/NW) = -1.33
+# logodd(FT/NW) = 0.55
+lopPT <- coef(mm3c)[1,1];lopPT
+lopFT <- coef(mm3c)[2,1];lopFT
+opPT <- exp(lopPT);opPT
+opFT <- exp(lopFT);opFT
+pNW <- (1/(1+opPT+opFT));pNW
+pPT <- opPT * pNW; pPT
+pFT <- opFT * pNW; pFT
+pFT + pPT + pNW
+
+predict(mm3c,type="class")
+predict(mm3c, newdata=data.frame(sons="absent",income=14.76),type="probs")
+predict(mm3c, newdata=data.frame(sons="absent",income=14.76),type="class")
+```
+
+
+```{r}
+# Point 4
+mmfit<- step(mm8) # mm3
+anova(mm3,mm8,test='Chisq')
+Anova(mm3, test="Chisq")
+#residualPlots(mm3) # Not working
+```
+
+
+```{r}
+# Point 6 and 7
+
+anova(mm3,mm6,test='Chisq')
+anova(mm1,mm3,test='Chisq')
+anova(mm2,mm3,test='Chisq')
+Anova(mm6,test="LR")
+```
+
+
+```{r}
+# Point 8
+
+mm33 <-multinom(  work~sons+income+I((income-mean(income))^2), data=womenlf,weight=ones )
+anova(mm3,mm33,test='Chisq')
+
+tt<-table(predict(mm3),womenlf$work);tt
+100*sum(diag(tt))/sum(tt)
+```
+
+
+# Point 11
+
+```{r}
+mm3c <-multinom(  work~sons+I(income-mean(income)), data=womenlf,weight=ones )
+summary(mm3c)
+summary(mm3)
+
+logodd2=0-1.3306078 + 0.02149908
+logodd3=0.5480198 -2.55859890
+logodd2;logodd3
+odd2=exp(logodd2);odd2
+odd3=exp(logodd3);odd3
+prob1=1/(1+odd2+odd3)
+prob2=prob1*odd2
+prob3=prob1*odd3
+prob1;prob2;prob3
+
+predict(mm3c, type="probs")
+predict(mm3c, type="probs",newdata=data.frame(sons="present",income=14.75665))
+
+# Not working !
+influence.measures(mm3)
+cooks.distance(mm3)
+sum(residuals(mm3,'deviance')^2)
+sum(residuals(mm3,'pearson')^2)
+```
+
+## Hierarchical models
+
+```{r}
+# Point 12
+########################################################################################
+#       Hierarchical models:
+#       Not Work    /   Work
+#                       Fulltime / Parttime
+#       Model Work / Not Work:
+
+hm1m3 <- glm(bwork~income+sons,data=womenlf,family=binomial)
+summary(hm1m3)
+
+hm1m8 <- glm(bwork~income*sons + region,data=womenlf,family=binomial)
+step(hm1m8)
+```
+
+# Point 13
+
+```{r}
+table( ifelse(predict(hm1m3,type="response")>0.5,"pwork","pnotwork"),womenlf$bwork)
+
+library("ROCR")
+dadesroc<-prediction(predict(hm1m3,type="response"),womenlf$bwork)
+par(mfrow=c(1,2))
+performance(dadesroc,"auc")
+plot(performance(dadesroc,"err"))
+plot(performance(dadesroc,"tpr","fpr"))
+abline(0,1,lty=2)
+
+# Interpret HL1 best model
+coef(hm1m3)
+exp(coef(hm1m3)[2:3])
+
+
+# Prediction for a HH with sons 'present' and mean income
+# Upper level
+
+predict(hm1m3,type="response",newdata=data.frame(sons="present",income=14.75665))
+1-predict(hm1m3,type="response",newdata=data.frame(sons="present",income=14.75665))
+```
+
+# Point 14
+
+```{r}
+summary(womenlf)
+hm2m3 <- glm(work~income+sons,data=womenlf,family=binomial,subset=bwork=="work")
+summary(hm2m3)
+hm2m8 <- glm(work~income*sons + region,data=womenlf,family=binomial,subset=bwork=="work")
+step( hm2m8 )
+
+AIC(hm1m3)
+AIC(hm2m3)
+110.49+325.73
+```
+
+# Point 15 and 16
+
+```{r}
+# Lower level
+# Diagnostics and prediction
+residualPlots(hm2m3)
+summary(subset(womenlf,work!="not_work"))
+plot(allEffects(hm2m3))
+
+#Coefficients: Full/Part
+#                          Estimate Std. Error z value Pr(>|z|)    
+# (Intercept)               1.89486    0.42476   4.461 8.16e-06 ***
+# I(income - mean(income)) -0.10727    0.03915  -2.740  0.00615 ** 
+# sonspresent              -2.65146    0.54108  -4.900 9.57e-07 ***
+#Coefficients: Work/NotWork
+#                          Estimate Std. Error z value Pr(>|z|)    
+# (Intercept)               0.71150    0.24230   2.936  0.00332 ** 
+# I(income - mean(income)) -0.04231    0.01978  -2.139  0.03244 *  
+# sonspresent              -1.57565    0.29226  -5.391    7e-08 ***
+#HL2
+logodd3_2=1.89486-2.65146;logodd3_2
+odd3_2=exp(logodd3_2);odd3_2
+prob3cW=odd3_2/(1+odd3_2);prob3cW
+prob2cW=1-prob3cW;prob2cW
+
+predict(hm2m3,type="response",newdata=data.frame(sons="present",income=14.75665))
+1-predict(hm2m3,type="response",newdata=data.frame(sons="present",income=14.75665))
+
+#HL1
+logoddW_1=0.71150-1.57565;logoddW_1
+oddW_1=exp(logoddW_1);oddW_1
+prW=oddW_1/(1+oddW_1);prW;
+pr1=1-prW;pr1
+pr2=prob2cW*prW;pr2
+pr3=prob3cW*prW;pr3
+pr1+pr2+pr3
+
+table( ifelse(predict(hm1m3,type="response")>0.5,"pwork","pnotwork"),womenlf$bwork)
+table(factor(ifelse(predict(hm2m3,type="response")<0.5,"pparttime","pfulltime"),levels=c("pparttime","pfulltime")),womenlf$work[womenlf$work!="not_work"])
+
+100*(132+33+55)/263
+```
+
+# Point 17
+
+```{r}
+
+AIC(hm1m3)+AIC(hm2m3)
+AIC(mm3) # Nominal proposal is better according to AIC. Nevertheless, confusion tgables
+
+library(MNLpred)
+# Plotting the predicted probabilities:
+library(ggplot2)
+library(scales)
+
+# Hessian matrix is needed
+womenlf$nsons <- as.numeric(womenlf$sons)-1
+mm3 <- multinom(work~income+nsons,data=womenlf,Hess = TRUE)
+summary(mm3)
+pred1 <- mnl_pred_ova(model = mm3,
+                      data = womenlf,
+                      x = "income",
+                      by = 1,
+                      seed = "random", # default
+                      nsim = 100, # faster
+                      probs = c(0.025, 0.975)) # default
+
+ggplot(data = pred1$plotdata, aes(x = income, 
+                                  y = mean,
+                                  ymin = lower, ymax = upper)) +
+  geom_ribbon(alpha = 0.1) + # Confidence intervals
+  geom_line() + # Mean
+  facet_wrap(.~ work, scales = "free_y", ncol = 2) +
+  scale_y_continuous(labels = percent_format(accuracy = 1)) + # % labels
+  scale_x_continuous(breaks = c(0:10)) +
+  theme_bw() +
+  labs(y = "Predicted probabilities",
+       x = "Income") # Always label your axes ;)
+
+mm3 <- multinom(work~income+nsons,data=womenlf,Hess = TRUE)
+summary(mm3)
+fdif2 <- mnl_fd_ova(model = mm3,
+                    data = womenlf,
+                    x = "income",
+                    by = 1,
+                    z = "nsons",
+                    z_values = c(0,1),
+                    nsim = 100)
+
+ggplot(data = fdif2$plotdata, aes(x = income, 
+                                  y = mean,
+                                  ymin = lower, ymax = upper,
+                                  group = as.factor(nsons),
+                                  linetype = as.factor(nsons))) +
+  geom_ribbon(alpha = 0.1) +
+  geom_line() +
+  facet_wrap(. ~ work, scales = "free_y", ncol = 2) +
+  scale_y_continuous(labels = percent_format(accuracy = 1)) + # % labels
+  scale_x_continuous(breaks = c(0:10)) +
+  scale_linetype_discrete(name = "Sons",
+                          breaks = c(0, 1),
+                          labels = c("Absent", "Present")) +
+  theme_bw() +
+  labs(y = "Predicted probabilities",
+       x = "Income by Sons") # Always label your axes ;)
+```
+
+# Point 18: Ordinal models
+
+```{r}
+library(MASS)
+om0 <-polr( work~1, data=womenlf,weight=ones )
+om1 <-polr( work~sons, data=womenlf,weight=ones )
+om2 <-polr( work~income, data=womenlf,weight=ones )
+om4 <-polr( work~region, data=womenlf,weight=ones )
+om3 <-polr(  work~sons+income, data=womenlf,weight=ones )
+om5 <-polr( work~sons+region,  data=womenlf,weight=ones )
+om5i <-polr( work~sons*region,  data=womenlf,weight=ones )
+om6 <-polr( work~sons*income,  data=womenlf,weight=ones )
+om7 <-polr( work~sons+region+income,  data=womenlf,weight=ones )
+om8 <-polr( work~region+sons*income, data=womenlf,weight=ones )
+
+anova(om0,om1,test='Chisq' )
+anova(om0,om2,test='Chisq' )
+anova(om0,om4,test='Chisq' )
+Anova(om3,test='Chisq')
+summary( om3 )
+Anova( om8, test="LR")
+step( om8 )
+
+names(om8)
+om0$deviance - om1$deviance
+om0$deviance - om4$deviance
+om0$deviance - om2$deviance
+```
+
+# Points 19 to 20
+
+```{r}
+anova(om5,om5i,test='Chisq')
+anova(om1,om5,test='Chisq')
+
+anova(om3,om6,test='Chisq')
+anova(om1,om3,test='Chisq')
+anova(om2,om3,test='Chisq')
+```
+
+# Punt 21
+
+```{r}
+om33 <-polr(  work~sons+income+I((income-mean(income))^2), data=womenlf,weight=ones )
+anova(om3,om33,test='Chisq')
+```
+
+# Punt 22
+
+```{r}
+
+library(effects)
+Effect(focal.predictors = c("income","sons"), om3)
+plot(Effect(focal.predictors = c("income","sons"), om3), rug = FALSE)
+
+summary(om3)
+
+#Coefficients:
+#                  Value Std. Error   t value
+#income      -0.05390061 0.01949010 -2.765538
+#sonspresent -1.97195668 0.28694823 -6.872169
+
+#Intercepts:
+#                  Value   Std. Error t value
+#not_work|parttime -1.8520  0.3863    -4.7943
+#parttime|fulltime -0.9409  0.3699    -2.5435
+
+#Residual Deviance: 441.663
+#AIC: 449.663
+
+#       Explanatory variables appear with opposite sign as described in lecture notes
+#       (LATENT VARIABLE).
+# Interpret in probability terms: sons present and income on the mean 
+
+om3c <-polr(  work~sons+I(income-mean(income)), data=womenlf,weight=ones )
+summary(om3c)
+
+logodd1=0-1.0566+1.97195668;logodd1
+logodd2=0-0.1455+1.97195668;logodd2
+
+gam1=exp(logodd1)/(1+exp(logodd1));gam1
+gam2=exp(logodd2)/(1+exp(logodd2));gam2
+pi1=gam1;pi1
+pi2=gam2-gam1;pi2
+pi3=1-gam2;pi3
+
+predict(om3, type="probs", newdata=data.frame(sons="present",income=mean(womenlf$income)))
+#       Most suitable model?
+AIC(hm1m3)+AIC(hm2m3)
+AIC(mm3) 
+AIC(om3)# Nominal proposal is better according to AIC. Nevertheless, confusion tgables
+
+# Confusion table
+tt<-table(predict(om3),womenlf$work);tt
+100*sum(diag(tt))/sum(tt)
+
+  #          not_work parttime fulltime
+  # not_work      133       36       23
+  # parttime        0        0        0
+  # fulltime       22        6       43
+
+# Link
+om3p <-polr(  work~sons+income, data=womenlf,weight=ones, method="probit" )
+om3g <-polr(  work~sons+income, data=womenlf,weight=ones, method="cloglog" )
+AIC( om3, om3p, om3g)  
+summary( om3g )
+```
+
+# Housing
+
+```{r}
+options(contrasts=c("contr.treatment","contr.treatment"))
+#options(contrasts = c("contr.treatment", "contr.poly"))
+
+load("C:/Users/lmontero/Dropbox/DOCENCIA/FIB-SIM/2021-22/LABORATORY/Practice7/copenhaguen.RData")
+summary(copen)
+
+# Ordenar les categories
+
+copen$housing <- ordered(copen$housing, levels=c("tower","apartments","atrium","terraced"))
+copen$influence <- ordered(copen$influence, levels=c("low","medium","high"))
+copen$contact <- ordered(copen$contact, levels=c("low","high"))
+copen$satisfaction <- ordered(copen$satisfaction, levels=c("low","medium","high"))
+
+summary(copen)
+attach(copen)
+
+#       Model de resposta nominal:
+#       satisfaccio = housing + influence + contact
+
+library(MASS)
+library(nnet)
+copen.mult <- multinom(satisfaction~housing+influence+contact,data=copen,weights=n)
+summary(copen.mult)
+
+#       Obtained estimates nominal outcome:
+#       logit 1: medium vs low
+#       logit 2: high vs low
+
+# Coefficients:
+#        (Intercept) housingapartments housingatrium housingterraced influencemedium
+# medium  -0.4192316        -0.4356851     0.1313663      -0.6665728       0.4464003
+# high    -0.1387453        -0.7356261    -0.4079808      -1.4123333       0.7348626
+#        influencehigh contacthigh
+# medium     0.6649367   0.3608513
+# high       1.6126294   0.4818236
+
+#       Ordinal Model :
+#       satisfaction = housing * influence + contact
+
+library(MASS)
+copen.polr <- polr(satisfaction~housing*influence+contact,data=copen,weights=n)
+summary(copen.polr)
+
+copen.polrp <- polr(satisfaction~housing*influence+contact,data=copen,weights=n, method="probit" )
+summary(copen.polrp)
+
+copen.polrg <- polr(satisfaction~housing*influence+contact,data=copen,weights=n,  method="cloglog")
+summary(copen.polrg)
+
+
+#       Best treatment?
+#       Ordinal response ?
+#       Nominal response ?
+
+#       Respondrem comparant les respostes observades i les esperades
+
+# Això no funciona per ara: cal multiplicar pel tamany de cada classe.
+tto<-xtabs(copen$n ~ copen$satisfaction+predict(copen.polr));tto
+ttm<-xtabs(copen$n ~ copen$satisfaction+predict(copen.mult));ttm
+100*sum(diag(tto))/sum(tto)
+100*sum(diag(ttm))/sum(ttm)
+# Take a look to AICs
+# Ordinal: AIC: 3484.64 (logit)  AIC: 3485.331 (probit)  AIC: 3494.878 (cloglog)
+# Multinomial: AIC: 3498.084  
+AIC(copen.polr)
+AIC(copen.polrp)
+AIC(copen.polrg)
+AIC(copen.mult)
+
+# Visualització Nominal: wide structure
+copen.wide <- expand.grid(housing=c("tower", "apartments", "atrium", "terraced"),
+                     influence=c("low","medium", "high"),
+                     contact=c("low", "high"))
+copen.predm <- predict(copen.mult,copen.wide,type="probs"); copen.predm                    
+copen.wide <- cbind( copen.wide, copen.predm )
+library("reshape2")
+copen.long <- melt (copen.wide,id.vars=c("housing","influence", "contact"),value.name="probablity")
+copen.long
+ggplot(copen.long, aes(x = housing, y = probablity, colour = influence)) +
+       geom_point() + facet_grid(variable ~ ., scales="free")
+ggplot(copen.long, aes(x = housing, y = probablity, colour = influence)) +
+       geom_point() + facet_grid(variable ~ contact, scales="free")
+ggplot(copen.long, aes(x = housing, y = probablity, colour = influence)) +
+       geom_point(aes(x=housing,  size=contact)) + facet_grid(variable ~ .)
+
+# Visualització Ordinal
+library(effects)
+Effect(focal.predictors = c("housing","influence","contact"), copen.polr)
+plot(Effect(focal.predictors = c("housing","influence","contact"), copen.polr), rug = FALSE)
+
+
+# Interpret zeta parameters
+coef(copen.polr)
+copen.polr$zeta
+codds<-exp(copen.polr$zeta);codds
+cprobs<-codds/(1+codds);cprobs
+cprobset<-c(0,cprobs,1)
+diff(cprobset)
+
+# Interpret logit polr model for obs contact 'high', influence 'low' and housing 'tower'
+
+coef(copen.polr)
+eta<-copen.polr$zeta - coef(copen.polr)[6] # Pay attention to - sign
+codds<-exp(eta);codds
+cprobs<-codds/(1+codds);cprobs
+cprobset<-c(0,cprobs,1)
+diff(cprobset)
+```
+
+# FESAL 1985
+
+Elaborated by German Rodríguez from the final report of the Demographic and Health Survey conducted in El Salvador in 1985 (FESAL-1985). Data table shows 3165 currently married women classified by age, grouped in five-year intervals, and current use of contraception, classified as sterilization, other methods, and no method.
+
+```{r}
+# Clear plots
+if(!is.null(dev.list())) dev.off()
+
+# Clean workspace
+rm(list=ls())
+options(contrasts=c("contr.treatment","contr.treatment"))
+load("Fesal1985.RData")
+summary(fesal85)
+head(fesal85)
+fesal85
+```
+
+## Nominal Proposal
+
+```{r}
+mm0 <- multinom( c.use ~ 1, weight=y, data=fesal85)
+mm1 <- multinom( c.use ~ g.age, weight=y, data=fesal85)
+mm2 <- multinom( c.use ~ n.age, weight=y, data=fesal85, Hess=T)
+mm3 <- multinom( c.use ~ poly(n.age,2), weight=y, data=fesal85)
+mm4 <- multinom( c.use ~ poly(n.age,3), weight=y, data=fesal85, Hess=T)
+mm4m <- multinom( c.use ~ n.age + I(n.age^2) + I(n.age^3), weight=y, data=fesal85, Hess=T)
+summary(mm1)
+Anova( mm4m, test="LR")
+summary(mm4m)
+anova( mm0, mm1, test="Chisq")
+anova( mm2, mm3, test="Chisq")
+anova( mm3, mm4, test="Chisq")
+
+AIC(mm1,mm4,mm2,mm3,mm4m)
+
+# Visualization
+# Observed data: probabilities and log-odds
+ggplot(data = fesal85[,c(7,2,5)], aes(x = n.age, 
+                                  y = oprob)) +
+  geom_line() + # Mean
+  # facet_wrap(.~ c.use, scales = "free_y", ncol = 3) +
+    facet_wrap(.~ c.use, ncol = 3) +
+  scale_y_continuous(labels = percent_format(accuracy = 1)) + # % labels
+  scale_x_continuous() +
+  theme_bw() +
+  labs(y = "Observed probabilities",
+       x = "n.age") # Always label your axes ;)
+
+ggplot(data = fesal85[,c(7,2,6)], aes(x = n.age, 
+                                  y = ologodd)) +
+  geom_line() + # Mean
+  facet_wrap(.~ c.use, ncol = 3) + #, scales = "free_y"
+  scale_y_continuous() + # % labels
+  scale_x_continuous() +
+  theme_bw() +
+  labs(y = "Observed logodds",
+       x = "n.age") # Always label your axes ;)
+
+# Linear model in n.age predictions
+
+pred1 <- mnl_pred_ova(model = mm2,
+                      data = fesal85,
+                      x = "n.age",
+                      by = 5,
+                      seed = "random", # default
+                      nsim = 100, # faster
+                      probs = c(0.025, 0.975)) # default
+
+ggplot(data = pred1$plotdata, aes(x = n.age, 
+                                  y = mean,
+                                  ymin = lower, ymax = upper)) +
+  geom_ribbon(alpha = 0.1) + # Confidence intervals
+  geom_line() + # Mean
+  facet_wrap(.~ c.use, ncol = 3) + #, scales = "free_y"
+  scale_y_continuous(labels = percent_format(accuracy = 1)) + # % labels
+  scale_x_continuous() +
+  theme_bw() +
+  labs(y = "Predicted probabilities",
+       x = "n.age") # Always label your axes ;)
+
+# Visualitzation considering factors
+# Visualització Nominal: wide structure
+fesal85.wide <- expand.grid(g.age=c("15-19", "20-24", "25-29", "30-34", "35-39", "40-44", "45-49"))
+fesal85.predm <- predict(mm1,fesal85.wide,type="probs"); fesal85.predm                    
+fesal85.wide <- cbind( fesal85.wide, fesal85.predm )
+library("reshape2")
+fesal85.long <- melt (fesal85.wide,id.vars=c("g.age"),value.name="probability")
+fesal85.long <- cbind( fesal85.long , fesal85$oprob)
+ggplot(fesal85.long, aes(x = g.age, y = probability, color=variable)) +
+       geom_point() +  geom_line(aes( x=as.numeric(g.age), y=probability, color=variable ))       + facet_grid(variable ~ ., scales="free")+
+  xlab("Factor Age")+ylab("Probability")+labs(title="Multinomial model mm1 - FESAL 85",color = "c.use") + geom_point( aes(x=g.age, y=fesal85$oprob), color = "black", size=2)
+
+ggplot(fesal85.long, aes(x = g.age, y = probability, color=variable)) +
+       geom_point() +  geom_line(aes( x=as.numeric(g.age), y=probability, color=variable )) +  xlab("Factor Age")+ylab("Probability")+labs(title="Multinomial model mm1 - FESAL 85",color = "c.use")
+
+# Predict probabilities for c.use levels and someone having 22 years
+summary(mm4m)
+mm4m <- multinom( c.use ~ n.age + I(n.age^2) + I(n.age^3), weight=y, data=fesal85, Hess=T)
+predict(mm4m,newdata=data.frame(n.age=22),type="probs")
+predict(mm4m,newdata=data.frame(n.age=22),type="class")
+loddOther<- coef(mm4m)["Other",]%*%c(1,22,22^2,22^3);loddOther
+loddSter<- coef(mm4m)["Ster",]%*%c(1,22,22^2,22^3);loddSter
+oddOther<-exp(loddOther)
+oddSter<-exp(loddSter)
+oddOther;oddSter
+
+probNone <- 1/(1+oddOther+oddSter);probNone
+probOther <- probNone*oddOther;probOther
+probSter <- probNone*oddSter;probSter
+probNone+probOther+probSter
+```
+
+## Ordinal Proposal
+
+```{r}
+library(MASS)
+om0 <- polr( c.use ~ 1, weight=y, data=fesal85)
+om1 <- polr( c.use ~ g.age, weight=y, data=fesal85)
+om2 <- polr( c.use ~ n.age, weight=y, data=fesal85)
+om3 <- polr( c.use ~ poly(n.age,2), weight=y, data=fesal85)
+om4 <- polr( c.use ~ poly(n.age,3), weight=y, data=fesal85)
+om3m <- polr( c.use ~ n.age + I((n.age)^2), weight=y, data=fesal85)
+om3mp <- polr( c.use ~ n.age + I((n.age)^2), weight=y, data=fesal85, method="probit")
+om3mg <- polr( c.use ~ n.age + I((n.age)^2), weight=y, data=fesal85, method="cloglog")
+
+summary(om3m)
+summary(om3mp)
+Anova(om4,test="Chisq")
+
+anova( om1, om4, test="Chisq" ) # Not correct
+anova( om2, om3, test="Chisq" )
+anova( om3, om4, test="Chisq" )
+
+# Best model Y ~ poly( X,2 )
+
+AIC( mm4, om3m, om1, om3mp, om3mg )
+
+# Visualització Ordinal
+library(effects)
+plot(Effect(focal.predictors = c("n.age"), om3m))
+
+# Forecast probability of categories for a 22 year woman
+
+om3mc <- polr( c.use ~ n.age + I(n.age^2), weight=y, data=fesal85)
+predict(om3mc,newdata=data.frame(n.age=22),type="probs")
+predict(om3mc,newdata=data.frame(n.age=22),type="class")
+
+coef(om3mc)
+om3mc$zeta
+lcoddNone<- om3mc$zeta[1] - coef(om3mc)%*%c(22,22^2);lcoddNone
+lcoddOther<- om3mc$zeta[2] - coef(om3mc)%*%c(22,22^2);lcoddOther
+coddNone<-exp(lcoddNone)
+coddOther<-exp(lcoddOther)
+coddNone;coddOther
+
+cprobNone <- coddNone/(1+coddNone);cprobNone
+cprobOther <- coddOther/(1+coddOther);cprobOther
+probSter <- 1-cprobOther;probSter
+cprobNone;cprobOther-cprobNone;probSter
+```
+
+## Hierarchical Approach
+
+```{r}
+fesal85$bc.use <- factor(ifelse(fesal85$c.use=="None",0,1), labels = c( "None", "Some" ) )
+
+bh1m0 <- glm( bc.use ~ 1, family = binomial, data = fesal85, weights = y )
+bh1m1 <- glm( bc.use ~ n.age, family = binomial, data = fesal85, weights = y )
+bh1m2 <- glm( bc.use ~ poly(n.age,2), family = binomial, data = fesal85, weights = y )
+bh1m3 <- glm( bc.use ~ poly(n.age,3), family = binomial, data = fesal85, weights = y )
+
+Anova( bh1m2, test="LR" )
+anova( bh1m1, bh1m2, test="Chisq" )
+anova( bh1m2, bh1m3, test="Chisq" )
+
+library(effects)
+plot(allEffects( bh1m2 ))
+
+bh2m0 <- glm( c.use ~ 1, family = binomial, data = fesal85[fesal85$bc.use=="Some",], weights = y )
+bh2m1 <- glm( c.use ~ n.age, family = binomial, data = fesal85[fesal85$bc.use=="Some",], weights = y )
+bh2m2 <- glm( c.use ~ poly(n.age,2), family = binomial, data = fesal85[fesal85$bc.use=="Some",], weights = y )
+bh2m3 <- glm( c.use ~ poly(n.age,3), family = binomial, data = fesal85[fesal85$bc.use=="Some",], weights = y )
+
+Anova( bh2m2, test="LR" )
+anova( bh2m1, bh2m2, test="Chisq" )
+anova( bh2m2, bh2m3, test="Chisq" )
+
+plot(allEffects( bh1m2 ))
+plot(allEffects( bh2m3 ))
+
+
+# Prediction 22 years
+bh1 <- glm( bc.use ~ I((n.age-22)) + I((n.age-22)^2), family = binomial, data = fesal85, weights = y )
+bh2 <- glm( c.use ~ I((n.age-22)) + I((n.age-22)^2) + I((n.age-22)^3), family = binomial, data = fesal85[fesal85$bc.use=="Some",], weights = y )
+
+coef(bh1)
+coef(bh2)
+exp(coef(bh1))[1]
+exp(coef(bh2))[1]
+probSome <- exp(coef(bh1))[1]/(1+exp(coef(bh1))[1]);probSome
+probOthercSome <- 1-(exp(coef(bh2))[1]/(1+exp(coef(bh2))[1]));probOthercSome
+probStercSome <-(exp(coef(bh2))[1]/(1+exp(coef(bh2))[1]));probStercSome
+probNone <-1-probSome;probNone
+probOther <- probSome*probOthercSome;probOther
+probSter <- probSome*probStercSome;probSter
+probNone+probOther+probSter
+```
+
+
+```{r}
+# AIC
+# 
+AIC(bh1m2) + AIC(bh2m3)
+AIC(mm4)
+AIC(om3m)
+
+# Confusion tables
+
+ttm <- xtabs( y ~ c.use + predict( mm4 ), data=fesal85); ttm
+100*sum(diag(ttm))/sum(ttm)
+tto <- xtabs( y ~ c.use + predict( om3m ), data=fesal85); tto
+100*sum(diag(tto))/sum(tto)
+
+ttb1 <- xtabs( y ~ bc.use + ifelse(predict( bh1m2, type = "response" )< 0.5, 0, 1), data=fesal85); ttb1
+ttb2 <- xtabs( y ~ c.use + ifelse(predict( bh2m3, newdata= fesal85[fesal85$bc.use=="Some",], type = "response" )< 0.5, 0, 1), data=fesal85[fesal85$bc.use=="Some",]); ttb2
+100*sum(815+198+922)/sum(ttm)
+```
+
+# Cheese tasting
+
+```{r}
+load("C:/Users/lmontero/Dropbox/DOCENCIA/FIB-SIM/2021-22/LABORATORY/Practice7/cheese.RData")
+summary(cheese)
+```
+
+```{r}
+om0 <- polr( c.taste ~ 1, data = cheese, weights=y )
+om1 <- polr( c.taste ~ additive, data = cheese, weights=y )
+om1p <- polr( c.taste ~ additive, data = cheese, method="probit",weights=y )
+om1cg <- polr( c.taste ~ additive, data = cheese, method="cloglog",weights=y )
+anova( om0 , om1, test="Chisq")
+summary(om1)
+summary(om1p)
+summary(om1cg)
+
+AIC( om1, om1p, om1cg )
+
+om1p$zeta
+cpA <- c(0,pnorm(om1p$zeta),1); cpA
+pA<-diff(cpA);pA
+
+om1p$coef
+om1p$zeta - om1p$coef[3]
+cpD <- c(0,pnorm(om1p$zeta - om1p$coef[3]),1); cpD
+pD<-diff(cpD);pD
+
+# Visualització Ordinal
+library(effects)
+cex=0.5
+plot(Effect(focal.predictors = c("additive"), om1,cex=0.5))
+
+```

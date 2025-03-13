@@ -1,0 +1,391 @@
+---
+title: "CSI_lab - End Topic 1 and Topic 2"
+author: "Lídia Montero"
+date: \today
+output: word_document
+editor_options: 
+  chunk_output_type: console
+---
+
+This is an R Markdown document. 
+We are showing some examples of GLMz. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>. Use * to provide emphasis such as *italics* and **bold**.
+
+Create lists: Unordered * and +     or   ordered   1. 2.  
+
+  1. Item 1
+  2. Item 2
+    + Item 2a
+    + Item 2b
+
+# Header 1
+## Header 2
+
+# Load Data Prestige
+
+```{r}
+
+# Clear plots
+if(!is.null(dev.list())) dev.off()
+
+# Clean workspace
+rm(list=ls())
+library(car)
+Prestige
+df<-Prestige
+df$f.prof <- 0
+df$f.prof <- ifelse(df$type=="prof",1,0)
+summary(df$f.prof)
+ll <- which( is.na(df$type ))
+df$f.prof[ll] <- 0
+
+df$f.prof <- factor( df$f.prof, levels=0:1, labels=c("Prof.No","Prof.Yes"))
+summary(df$f.prof)
+```
+
+
+# Global Association among numeric variables
+
+```{r}
+# Numeric insights
+cor(df[,c(4,1:3)],method="pearson") # Parametric
+cor(df[,c(4,1:3)],method="spearman") # Non Parametric
+
+# Graphics
+plot(df[,c(4,1:3)])
+
+# Inferential Tools
+# 
+cor.test(df$prestige,df$income,method="spearman")
+cor.test(df$prestige,df$income,method="spearman",data=df)
+```
+
+# Global Association Y~A (binary) and Y~C (polytomic)
+
+Tests on means
+
+```{r}
+
+# Inferential tools
+
+oneway.test(prestige~type,data=df)  # Parametric
+kruskal.test(prestige~type,data=df) # Non Parametric
+
+
+# Inferential tools for a binary factor
+
+t.test(prestige~f.prof,data=df)  # Parametric
+wilcox.test(prestige~f.prof,data=df) # Non Parametric
+```
+
+Specific Association Tests on means Y~C (polytomic)
+
+```{r}
+
+# Inferential tools
+
+pairwise.t.test(df$prestige,df$type)  # Parametric
+pairwise.wilcox.test(df$prestige,df$type) # Non Parametric
+
+pairwise.t.test(df$prestige,df$type, alternative="less")  # Parametric
+pairwise.wilcox.test(df$prestige,df$type, alternative="less") # Non Parametric
+
+pairwise.t.test(df$prestige,df$type, alternative="greater")  # Parametric
+pairwise.wilcox.test(df$prestige,df$type, alternative="greater") # Non Parametric
+
+model.tables(aov(prestige~type,df),type="mean")
+model.tables(aov(prestige~type,df),type="effects")
+```
+
+Tests on variances for groups defined by a factor
+
+```{r}
+
+# Inferential tools   C Polytomic factor
+
+bartlett.test(prestige~type,data=df)  # Parametric
+fligner.test(prestige~type,data=df) # Non Parametric
+
+# Inferential tools for a binary factor
+
+var.test(prestige~f.prof,data=df)  # Parametric
+fligner.test(prestige~f.prof,data=df) # Non Parametric
+bptest(prestige~type,data=df) # Breusch Pagan Test: popular in econometrics - Parametric Test
+```
+
+# Load Swiss Labor Force data set
+
+```{r}
+library(AER)
+data("SwissLabor")
+ls()
+df<-SwissLabor
+summary(df)
+
+levels(df$participation) <- paste0("f.par-",levels(df$participation))
+levels(df$foreign) <- paste0("f.for-",levels(df$foreign))
+
+# participation probability p = 0.5  - Exact Test
+table( df$participation )
+prop.table( table( df$participation ) )
+
+binom.test(x = 401, n = nrow( SwissLabor ), p=1/2, alternative = "two.sided" ) # Default Two-sided
+binom.test(x = 401, n = nrow( SwissLabor ), p=1/2, alternative = "greater") # P(H1) = 1- 0.9919
+binom.test(x = 401, n = nrow( SwissLabor ), p=1/2, alternative = "less") # P(H1) = 0.9919
+
+prop.test(x = 401, n = nrow( SwissLabor ), p=1/2, alternative = "two.sided", correct = F)
+chist <- (((401-436)^2)/436  + ((471-436)^2)/436);chist
+1-pchisq(chist,1)
+qchisq(0.975,1)
+
+prop.test(x = 401, n = nrow( SwissLabor ), p=1/2, alternative = "less", correct = F)
+
+prop.test(x = 401, n = nrow( SwissLabor ), p=1/2, alternative = "greater", correct = F)
+
+
+# 95% CI for population probability
+pp = 401/872; pp
+pplci <- pp - qnorm( 0.975) * sqrt(pp * ( 1-pp )/ 872)
+pphci <- pp + qnorm( 0.975) * sqrt(pp * ( 1-pp )/ 872)
+pplci; pphci
+
+# Propability of participation depending on foreign status
+table( df$participation, df$foreig )
+margin.table(table(df$participation, df$foreig),2)
+prop.table( table( df$participation, df$foreig ),2 )
+prop.test( c(254, 147), c(656, 216), correct = F)
+
+# Test on means for k=3 groups defined by type
+oneway.test(df$income~df$participation) # Parametric test: normal data (Y)
+kruskal.test(df$income~df$participation)
+
+# Test on variances for k=3 groups defined by type
+bartlett.test(income~participation,data=df) # Parametric test: normal data (Y)
+fligner.test(income~participation,data=df)
+bptest(income~participation,data=df) # Breusch Pagan Test: popular in econometrics
+
+# Bootstrap
+# Basic Bootstrap procedure
+# 95% for income median
+library(boot)
+median.fun <- function( data, idx ) { dv<-data[ idx, "income"];median( dv )}
+bootstrapdis <- boot( SwissLabor, median.fun, R = 500)
+bootstrapdis$t
+plot( bootstrapdis )
+str( bootstrapdis )
+quantile( bootstrapdis$t, seq(0,1,0.025))
+summary( SwissLabor$income )
+
+# 95%CI for correlation between age and education
+# bootstrap 
+set.seed(12345)
+corr.fun <- function(data, idx) {
+  df <- data[idx, ]
+  cor(df[, 3], df[, 4], method = 'spearman')
+}
+bootdis<-boot(SwissLabor, corr.fun, R = 999)
+plot(bootdis)
+boot.ci( boot.out=bootdis )
+```
+
+## Missing data treatment
+
+```{r}
+library(car)
+Prestige
+df<-Prestige
+df$f.prof<-0
+df$f.prof[df$type=="prof"]<-1
+table(df$type, useNA = "ifany")
+df$f.prof
+table(df$f.prof)
+df$f.prof<-factor(df$f.prof,labels=c("Prof.No","Prof.Yes"))
+
+summary(df)
+levels(df$type) <- paste0("f.type-", levels(df$type) )
+
+# Missing data
+# Artifitially setting of missing data for 0% women
+ll <- which( df$women==0); length(ll)
+df$women[ ll ] <- NA
+
+# Numeric variables: remove NA by assignment of variable mean
+mm<-mean(df$women,na.rm=T);mm
+df[is.na(df$women),"women"]<-mm
+
+# Validation of imputed variables
+summary(Prestige$women)
+summary(df$women)
+
+par(mfrow=c(1,2))
+hist(Prestige$women,col="green")
+hist(df$women,col="red")
+par(mfrow=c(1,1))
+summary(df)
+summary(Prestige)
+
+# Professional Tools: library missMDA
+library(missMDA)
+df[,1:4]<-Prestige[,1:4]
+ll <- which( df$women==0); length(ll)
+df$women[ ll ] <- NA
+summary(df)
+res.pca<-imputePCA(df[,1:4])
+summary(res.pca$completeObs)
+
+# mice library: useful for numeric and factor imputation
+# 
+library(mice)
+res.mice <- mice(df)
+str(res.mice)
+res.mice$data # Original dataset
+complete(res.mice) # Data frame containing completed data set
+# Plot
+# 
+par(mfrow=c(1,3))
+hist(Prestige$women,col="green")
+hist(df$women,col="red")
+hist(res.pca$completeObs[,3],col="blue")
+par(mfrow=c(1,1))
+
+#type
+res.mca<-imputeMCA(df[,6:7],method="EM")
+cbind(res.mca$completeObs[,"type"],df$type)
+df[,1:6]<-Prestige[,1:6] # NAs are retained
+options(contrasts=c("contr.treatment","contr.treatment"))
+```
+
+# Multivariate Outlier detection (NAs should be avoided): only for numeric variables
+
+```{r}
+library(chemometrics)
+res.out<-Moutlier(Prestige[,1:4],quantile=0.975)
+str(res.out)
+res.out
+quantile(res.out$md,seq(0,1,0.025))
+which((res.out$md > res.out$cutoff) & (res.out$rd > res.out$cutoff)) # Select obs having classical and robust Mahalanobis distance over cutoff for theoretical distribution
+
+plot( res.out$md, res.out$rd )
+text(res.out$md, res.out$rd, labels=rownames(Prestige),adj=1, cex=0.5)
+abline(h=res.out$cutoff, col="red")
+abline(v=res.out$cutoff, col="red")
+
+res.out$cutoff^2
+qchisq(0.975,4)
+```
+
+# Profiling and Feature Selection Tools in FactoMineR
+
+```{r}
+library(FactoMineR)
+
+?condes
+res.con<-condes(df,4)
+str(res.con)
+names(res.con)
+res.con$quanti
+res.con$quali
+res.con$category
+
+# Just to try: Let type be the response for example purposes
+names(df)
+res.cat<-catdes(df,num.var=6)
+names(res.cat)
+res.cat$test.chi2
+res.cat$category
+res.cat$quanti.var
+res.cat$quanti
+```
+
+Profiling for SwissLabor dataset
+
+
+```{r}
+
+library(AER)
+data("SwissLabor")
+ls()
+df<-SwissLabor
+summary(df)
+
+levels(df$participation) <- paste0("f.par-",levels(df$participation))
+levels(df$foreign) <- paste0("f.for-",levels(df$foreign))
+
+library(FactoMineR)
+res.con <- condes(df,2)
+str(res.con)
+res.con$quanti
+res.con$quali
+res.con$category
+
+res.cat <- catdes(df,1)
+str(res.cat)
+res.cat$test.chi2
+res.cat$quanti.var
+res.cat$category
+res.cat$quanti
+```
+
+# Load CPS Data set
+
+```{r}
+library(AER)
+data("CPS1985")
+ls()
+df<-CPS1985
+summary(df)
+
+hist(df$wage,freq=F,breaks=10)
+m=mean(df$wage);std=sd(df$wage);m;std
+curve(dnorm(x,m,std),col="red",lwd=2,add=T)
+
+library(lmtest)
+dwtest(wage~1,data=df)
+shapiro.test(df$wage)  
+
+stripchart(df$wage~df$ethnicity,method="stack",xlab="Wage vs sector",pch=19,col=3,main="Dotplot Wage in CPS1985")
+
+# Test on means for k=3 groups defined by sector
+oneway.test(df$wage~df$sector) # Parametric test: normal data (Y)
+kruskal.test(df$wage~df$sector)
+
+# Test on variances for k=3 groups defined by sector
+bartlett.test(wage~sector,data=df) # Parametric test: normal data (Y)
+fligner.test(wage~sector,data=df)
+bptest(wage~sector,data=df) # Breusch Pagan Test: popular in econometrics
+
+library(FactoMineR)
+res.con <- condes(df,1)  # Target wage (natural target)
+res.cat <- catdes(df,5)  # Target ethnicity
+
+res.con$quanti
+res.con$quali
+res.con$category
+
+res.cat$test.chi2
+res.cat$category
+res.cat$quanti.var
+res.cat$quanti
+```
+
+PCA example
+
+```{r}
+# Temperatures can be summarised by two synthetic variables: average annual temperature and thermal amplitude
+library(FactoMineR)
+temperature <- read.table("http://factominer.free.fr/book/temperature.csv",header=TRUE,sep=";",dec=".",row.names=1)
+
+summary(temperature)
+
+# Target : Annual
+# Active variables temperatures Jan to Dec
+res<-PCA(temperature[,1:12])
+res<-PCA(temperature[,1:16],quanti.sup=13:16)
+res<-PCA(temperature,ind.sup=24:35,quanti.sup=13:16,quali.sup=17)
+
+summary(res, nb.dec = 2, ncp = 4, nbelements = 12 )
+res.con <- dimdesc(res,1:2)
+str(res.con)
+res.con$Dim.1
+res.con$Dim.2
+```
+
