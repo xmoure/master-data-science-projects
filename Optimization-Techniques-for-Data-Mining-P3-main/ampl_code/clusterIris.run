@@ -1,0 +1,49 @@
+reset;
+
+print "SOLVING IRIS DATA";
+
+option solver cplex;
+
+# Number of clusters
+param k := 3;
+
+# Include the model definition
+include ./ampl_code/cluster.mod;
+
+
+# Load the data
+data ./data/iris.dat;
+
+# Solve the optimization problem
+solve;
+display _total_solve_elapsed_time;
+
+# Display the assignment of points to clusters
+print "### Assignment of points to clusters ###"; print "";
+display x;
+# Store the assignment of points to clusters
+display x > "./output/iris_cluster_assignments.txt";
+
+for {i in 1..m} {
+for {j in 1..m} {
+	 printf '%d ', x[i,j] >> ./output/output_iris.txt;
+	 }
+	 printf '\n' >> ./output/output_iris.txt;
+	 }
+	 
+	 
+print "### Number of points per cluster ###"; print "";
+
+var total{i in 1..m};
+
+for{i in 1..m} {
+	for{j in 1..m}{
+		let total[i] := total[i] + x[j,i];
+	}
+} 
+
+
+display total;
+
+
+

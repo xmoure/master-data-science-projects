@@ -1,0 +1,33 @@
+reset;
+
+print "SOLVING BLOBS DATA WITH LESS CONSTRAINTS";
+
+option solver cplex;
+
+# Number of clusters
+param k := 3;
+
+# Include the model definition
+include ./ampl_code/cluster_less_constraints.mod;
+
+# Load the data
+data ./data/blob.dat;
+
+# Solve the optimization problem
+solve;
+
+display _total_solve_elapsed_time;
+
+# Display the assignment of points to clusters
+print "### Assignment of points to clusters ###"; print "";
+display x;
+# Store the assignment of points to clusters
+display x > "./output/bolb_cluster_assignments_less_constraints.txt";
+
+for {i in 1..m} {
+for {j in 1..m} {
+	 printf '%d ', x[i,j] >> ./output/output_blob_less_constraints.txt;
+	 }
+	 printf '\n' >> ./output/output_blob_less_constraints.txt;
+	 }
+	
