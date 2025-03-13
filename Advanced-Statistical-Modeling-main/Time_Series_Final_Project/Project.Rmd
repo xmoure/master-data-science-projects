@@ -1,0 +1,797 @@
+---
+title: "Time Series"
+output: pdf_document
+date: '2023-12-21'
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+library(tseries)
+library(tidyverse)
+library(forecast)
+library(patchwork)
+library(plotly)
+library(kableExtra)
+```
+
+# Introduction
+
+The objective of this project is to examine the trends and patterns in the usage
+of the Barcelona Metro over the past two decades. By employing the Box-Jenkins 
+ARIMA methodology on the provided data set, our goal is to conduct a 
+comprehensive time series analysis and to generate future forecasts. The initial
+phase will involve an exploratory data analysis to assess the key 
+characteristics of the time series data. Subsequently, we aim to identify and 
+estimate a range of suitable models, selecting the most effective one for 
+predictive purposes. Finally, we will evaluate the time series for potential 
+anomalies that could influence the accuracy of our predictions.
+
+# Dataset
+
+The dataset comprises data detailing the volume of passengers conveyed by the 
+metro system within the Barcelona metropolitan area.
+
+```{r cars}
+# Load data 
+(metro=ts(read.table("metro.dat"),start=1996,freq=12))
+```
+
+We will start by plotting the time series. 
+
+From it we can observe the following:
+- There appears to be an overall increasing trend in the usage of the metro over
+time. 
+- There are regular fluctuations within each year, which indicates seasonality. 
+This might be due to seasonal variations in tourism, local events, or weather 
+conditions affecting how often people use the metro. For instance, we know that 
+during summer the number of metro passengers drops.
+- The variability in the number of passengers seems to change over time. In 
+certain periods, the swings between the high and the low passenger counts within
+a year are more pronounced.
+
+
+```{r}
+
+plot(metro,xlab = "Year", ylab="Thousands of passangers", main="Barcelona Metro Pasengers")
+abline(v=1996:2020,lty=3,col=4)
+```
+# Identification
+
+## Stationarity
+
+In the following analysis, we will conduct a test to determine the stationarity 
+of the time series. Should the series prove to be non-stationary, we will apply 
+the necessary transformations to stabilize its variance and mean. Achieving 
+stationarity is essential for the reliability of parameter estimates, which in 
+turn is vital for drawing meaningful and statistically significant conclusions.
+
+### Constant variance
+
+Ensuring constant variance, also known as homoscedasticity, is a fundamental 
+requirement for a time series to be considered stationary. The assessment of 
+this property can be effectively conducted through the use of Box plots and 
+Mean-Variance plots, which provide a visual representation of variance 
+consistency across the time series.
+
+
+The mean-variance plot does not exhibit a discernible trend with regard to the 
+variance of the dataset, implying that the time series could be stationary. 
+Additionally, the boxplot visualization generally indicates that the variance 
+remains relatively consistent over the observed period.
+Consequently, it can be inferred that the variance is sufficiently constant, 
+obviating the need for data transformation to stabilize variance before further 
+analysis.
+
+
+```{r}
+
+n_years <- floor(length(metro) / 12)
+
+# Reshape the data to have years as rows and months as columns
+data_matrix <- matrix(metro[1:(n_years * 12)], ncol=12, byrow=TRUE)
+
+# Calculate means and variances for each 12-month period
+yearly_means <- apply(data_matrix, 1, mean)
+yearly_variances <- apply(data_matrix, 1, var)
+
+# Create the mean-variance plot
+plot(yearly_means, yearly_variances, xlab="Mean", ylab="Variance",
+     main="Mean vs Variance Plot for 12-Month Periods")
+
+fit <- lm(yearly_variances ~ yearly_means)
+abline(fit, col="blue")
+
+```
+
+
+```{r}
+boxplot(metro~floor(time(metro)),xlab = "Year", main="Boxplot of the data grouped by year", ylab = "Thousands of Passangers")
+```
+#### Log transformation
+
+We decided to try applying a log transformation, just to be sure. However, from
+the results we can see that it not necessary to apply it as we get even worse 
+results for the variance.
+
+```{r}
+lnmetro=log(metro)
+plot(lnmetro)
+abline(v=1996:2020,col=4,lty=3)
+abline(h=0)
+```
+
+
+```{r}
+groupedlnmetro <- matrix(lnmetro[1:(n_years*12)],ncol=12) 
+boxplot(lnmetro~floor(time(metro)),xlab = "Year", 
+        main="Boxplot of the data grouped by year", 
+        ylab = "Thousands of Passangers")
+```
+
+```{r}
+m<-apply(groupedlnmetro,2,mean)
+v<-apply(groupedlnmetro,2,var)
+plot(v~m)
+abline(lm(v~m),col=2,lty=3)
+```
+
+### Seasonality
+
+As previously noted, the data exhibits a discernible seasonal pattern, which 
+aligns with expectations since the usage of the metro system is influenced by 
+seasonal variations. This cyclical behavior is typical for transportation data, 
+reflecting changes in passenger numbers due to factors such as weather, 
+holidays, and school schedules.
+
+From the plots, we can observe that there is a clear seasonal pattern. In 
+August, the number of passengers using the metro decreases. The reason behind 
+this, can be the fact that during the holidays in August people tend to travel 
+abroad more and consequently they do not use the metro.
+
+Since we found that seasonality is present we need to eliminate it by applying 
+a seasonal difference.
+$(1 -B^{12}) X_t$.
+
+
+```{r}
+metro %>%
+  decompose(filter = rep(1 / 12, 12)) %>%
+  autoplot() +
+  scale_x_continuous(minor_breaks = seq(1996, 2020, 1))
+```
+
+
+```{r}
+ggmonthplot(metro) + labs(title="Monthly Metro Passenger Numbers",
+                          y = "Thousands of Passengers")
+ggseasonplot(metro, year.labels = TRUE) + labs(title="Seasonal plot")
+```
+
+```{r}
+# Apply Seasonal difference
+d12metro <- diff(metro, lag = 12)
+```
+
+```{r}
+# Plot the new series with the seasonal difference 
+
+ggmonthplot(d12metro) + labs(title="Monthly Metro Passenger Numbers",
+                             y = "Thousands of Passengers")
+ggseasonplot(d12metro, year.labels = TRUE) + labs(title="Seasonal plot")
+
+```
+
+
+```{r}
+plot(d12metro)
+abline(h=0)
+abline(h=mean(d12metro),col=2)
+```
+
+
+### Constant mean. 
+
+Next step is to check whether the mean is constant.
+
+```{r}
+plot(d12metro)
+abline(h=0)
+abline(h=mean(d12metro),col=2)
+```
+
+```{r}
+mean(d12metro) 
+```
+
+We check for one regular difference.
+
+```{r}
+d1d12metro <- diff(d12metro, lag = 1)
+```
+
+
+```{r}
+plot(d1d12metro)
+abline(h=0)
+abline(h=mean(d1d12metro),col=2)
+```
+
+```{r}
+mean(d1d12metro)
+```
+
+Check for a second regular difference
+
+```{r}
+d1d1d12metro <- diff(d1d12metro, lag = 1)
+```
+
+```{r}
+plot(d1d1d12metro)
+abline(h=0)
+abline(h=mean(d1d1d12metro),col=2)
+```
+
+We look at the variance values. It can be seen that the variance increases with 
+the first regular difference and also with the second regular difference. This
+is an indication that we are over-differencing and thus we should not apply
+a regular difference.
+
+```{r}
+var1 <- var(d12metro)
+var2 <- var(d1d12metro)
+var3 <- var(d1d1d12metro)
+
+cat("Variance without regular difference:", var1, "\n")
+cat("Variance with one regular difference:", var2, "\n")
+cat("Variance with two regular difference:", var3, "\n")
+```
+
+We look at the ACF plot to see if the series is already stationary.
+First we look at the one without applying a regular difference and then at the
+one where we apply a regular difference.
+
+From the first plot we can see that the ACF starts with a high value at lag 1
+and then decreases but does not decay rapidly towards zero, as the subsequent 
+lags hover above or below the significance bounds.
+The second plot shows an ACF where the initial lags quickly approach the zero
+line and stay within the bounds of significance, indicating a rapid decay
+towards zero.
+
+In summary, it seems that the second plot depicts an ACF that decays more 
+rapidly towards zero, which is more indicative of a stationary time series. 
+
+Although it is true that the variance increases when applying one regular 
+differentiation, the mean seems more constant (and equal to zero). This is why 
+we decided to continue with the time series with one regular difference applied.
+
+Thus, we suggest the following transformation to stabilize the time series:
+\begin{equation}
+W_t = (1-B)(1-B^{12})X_t
+\end{equation}
+
+```{r}
+par(mar = c(5, 4, 4, 2))
+acf(d12metro,ylim=c(-1,1),lag.max=60,col=c(2,rep(1,3)), main ="ACF(serie)")
+
+```
+
+
+```{r}
+
+par(mar = c(5, 4, 4, 2))
+acf(d1d12metro,ylim=c(-1,1),lag.max=60,col=c(2,rep(1,3)), main ="ACF(serie)")
+
+```
+
+## Identification of plausible models and estimation
+
+The next step would be to try different configuration of the seasonal ARIMA 
+models (p,d,q)(P,D,Q)s, knowing that d and D would be 1 ans s is 12, using 
+the acf and pacf plots to identify the possible values of p,q,P and Q.
+
+```{r}
+acf(d1d12metro,ylim=c(-1,1),col=c(2,rep(1,11)),lwd=2,lag.max=72)
+pacf(d1d12metro,ylim=c(-1,1),col=c(rep(1,11),2),lwd=2,lag.max=72)
+```
+
+Looking at the lags of the pacf, the model suggests non-seasonal AR(4), AR(6), 
+depending of if we consider the lag after lag 4 close enough to the confidence
+band to be worth considering. For the seasonal part only the first seasonal 
+lag being significant, so we would have a seasonal AR(1), or AR(4)
+
+Looking at the acf, the model suggests non-seasonal MA(5) or MA(8), depending 
+if the lag 7 is a random happenstance or it really is significant. For the 
+seasonal part, due to how all the seasonal lags seem significant, we can test 
+seasonal MA(1) and MA(6), but it seems likely that the seasonal AR component 
+is better.
+
+First we test the model AR(6) with the seasonal component AR(1). We use AR(6) 
+instead of AR(4) to later simplify if necessary.
+
+
+```{r}
+(mod1=arima(d1d12metro,order=c(6,0,0),seasonal=list(order=c(1,0,0),period=12)))
+```
+
+
+```{r}
+(mod2=arima(d1d12metro,order=c(6,0,0),seasonal=list(order=c(4,0,0),period=12)))
+cat("\nT-ratios:", round(mod2$coef/sqrt(diag(mod2$var.coef)),2))
+```
+
+
+```{r}
+(mod3=arima(d1d12metro,order=c(6,0,0),seasonal=list(order=c(1,0,0),period=12)))
+```
+
+```{r}
+(mod4=arima(d1d12metro,order=c(0,0,8),seasonal=list(order=c(1,0,0),period=12)))
+
+```
+
+```{r}
+(mod5=arima(d1d12metro,order=c(0,0,5),seasonal=list(order=c(1,0,0),period=12)))
+
+```
+
+```{r}
+(mod6=arima(d1d12metro,order=c(0,0,7),seasonal=list(order=c(1,0,0),period=12)))
+
+```
+
+
+```{r}
+(mod7=arima(d1d12metro,order=c(0,0,6),seasonal=list(order=c(0,0,6),period=12)))
+```
+
+
+```{r}
+(mod8=arima(d1d12metro,order=c(0,0,3),seasonal=list(order=c(1,0,0),period=12)))
+```
+
+```{r}
+(mod9=arima(d1d12metro,order=c(0,0,3),seasonal=list(order=c(4,0,0),period=12)))
+cat("\nT-ratios:", round(mod9$coef/sqrt(diag(mod9$var.coef)),2))
+```
+
+
+```{r}
+(mod10=arima(d1d12metro,order=c(0,0,7),seasonal=list(order=c(4,0,0),period=12)))
+cat("\nT-ratios:", round(mod10$coef/sqrt(diag(mod10$var.coef)),2))
+```
+
+
+```{r}
+(mod11=arima(d1d12metro,order=c(0,0,3),seasonal=list(order=c(0,0,1),period=12)))
+```
+
+```{r}
+(mod12=arima(d1d12metro,order=c(0,0,7),seasonal=list(order=c(0,0,6),period=12)))
+cat("\nT-ratios:", round(mod12$coef/sqrt(diag(mod12$var.coef)),2))
+
+```
+
+
+```{r}
+(mod13=arima(d1d12metro,order=c(0,0,3),seasonal=list(order=c(0,0,6),period=12)))
+cat("\nT-ratios:", round(mod13$coef/sqrt(diag(mod13$var.coef)),2))
+
+```
+
+
+```{r}
+(mod14=arima(d1d12metro,order=c(6,0,0),seasonal=list(order=c(0,0,6),period=12)))
+
+```
+
+Models 10, and 9 are selected due to them having the lowests aic. The intercept 
+in this two models is not significant due to the T-ratio being below 2, but some
+of the values seem to also not be significant, so it shall be tested if the aic 
+can impove by setting these values as 0.
+
+```{r}
+(mod15=arima(d1d12metro,order=c(0,0,2),seasonal=list(order=c(4,0,0),period=12)))
+```
+
+```{r}
+(mod16=arima(d1d12metro,order=c(0,0,6),seasonal=list(order=c(4,0,0),period=12),
+             fixed = c(NA,NA,0,NA,0,NA,NA,NA,NA,NA,NA)))
+```
+
+Models 15 and 16 show a slightly reduced aic after removing some of the not 
+significant variables. Now these models can be fitted to the original data as 
+SARIMA(0,1,2)(4,1,0) and SARIMA(0,1,6)(4,0,0).
+
+
+
+```{r}
+(mod_1=arima(metro,order=c(0,1,2),seasonal=list(order=c(4,1,0),period=12)))
+cat("\nT-ratios:", round(mod_1$coef/sqrt(diag(mod_1$var.coef)),2))
+```
+
+Model only presents one value that is not significant, but the aic worsens 
+if it is set as 0, so it remains. Model presents an estimated white noise of 
+variance of 1240050 and an aic of 4672.11
+
+```{r}
+(mod_2=arima(metro,order=c(0,1,6),seasonal=list(order=c(4,1,0),period=12),
+             fixed = c(NA,NA,0,NA,0,NA,NA,NA,NA,NA)))
+cat("\nT-ratios:", round(mod_2$coef/sqrt(diag(mod_2$var.coef)),2))
+```
+Model only presents one value that is not significant, but the aic worsens if it
+is set as 0, so it remains. Model presents an estimated white noise of variance 
+of 1190489 and an aic of 4666.34.
+
+The statistical expressions of our two final models are:
+
+* $$
+(1 - B)^1 X_t = (1 + \theta_1 B + \theta_2 B^2)(1 - B^{12})^1 \Phi(B^{12}) Z_t
+$$
+where $Z_t$ is white noise with $Z_t \sim \mathcal{N}(0, \sigma^2)$.
+
+* $$
+(1 - B)^1(1 - B^{12})^1 X_t = \theta_1 B + \theta_2 B^2 + \theta_4 B^4 + 
+\theta_5 B^5 + \theta_6 B^6 \\
+\quad - \Phi_1 B^{12} - \Phi_3 B^{36} - \Phi_4 B^{48} + Z_t \\
+Z_t \sim \mathcal{N}(0, \sigma^2)
+$$
+where $\theta_3$ and $\Phi_2$ are fixed at zero.+
+
+
+# Validation
+
+## Residual analysis
+
+For the validation part we use the function provided to us by the professor in
+order to evaluate both models and analyze their residuals.
+
+```{r}
+source("./validation.R")
+
+```
+
+### Model 1
+
+```{r}
+validation(mod_1,d1d12metro)
+```
+
+Looking at the residual plot, almost all of the values find themselves inside 
+the confidence interval, indicating a constant variance over the residuals and 
+there does not seem to appear any visual pattern. There does seem to be a slight
+change in the variance at the beginning and then it remains more or less 
+constant, a fact that might be caused by outliers.
+
+The square root of absolute residuals show a more or less constant variance for 
+the residuals except at the beginning, which might be due to outliers
+
+Looking at the Normal Q-Q Plot it shows the residuals have a normal distribution
+except for a few points at the tails, which confirm the probability of 
+residuals. The histogram if the residuals also seem to follow a normal 
+distribution.
+
+The ACF and PACF show some lags outside the confidence band, too many to not 
+consider that there might be some autocorrelation present in the data
+
+Shapiro-Wilk normality test, Anderson-Darling normality test and Jarque Bera 
+Test the null hypothesis is rejected, meaning the residuals do not have a normal
+distribution, which might be due to the presence of possible outliers.
+Studentized Breusch-Pagan test null hypothesis is not rejected, meaning the 
+variance of the residuals can be assumed constant.
+Durbin-Watson test null hypothesis is not rejected, meaning the autocorrelation 
+can be assumed to be 0.
+
+Ljung Box test results show that from lag 11 the points show some 
+autocorrelation, confirming what was observed in the ACF/PACF plots.
+
+The sample ACF and PACF are quite similar for the origin lags, losing some of 
+the similarities the further from the origin the lags find themselves.
+
+After all this analysis, we can conclude that the residuals do not follow a 
+normal distribution, show homoscedasticity and are not independent, probing 
+the model is not correct.
+
+### Model 2
+
+```{r}
+validation(mod_2,d1d12metro)
+```
+The results are similar to the last model, but in this case the number of lags 
+that are outside the confidence bands in the ACF and PACF plots is acceptable 
+and the Ljung-Box stadistic does not show any autocorrelation is present, so 
+even though the residuals still do not follow a normal distribution the present 
+homoscedasticity and are independent, and after the outlier treatment the only 
+problem it presents should be solved.
+
+## Infinite model
+
+We are going to analyze the expressions of the $AR$ and $MA$ infinite models.
+
+Since Model mod_1 is an MA(2), it can be expressed as 1/((1-phiB)+(1-phiB^2)
+
+```{r}
+ma_coeffs <- mod_1$coef[1:2]
+
+p <- c(1, ma_coeffs)
+
+# Find the roots of the polynomial
+roots <- polyroot(p)
+
+# Print the roots
+roots
+```
+
+```{r}
+f21 = ggplotly(autoplot(mod_1) +
+  geom_point(color="#440154", fill='#414487', shape=21, size=1) +
+  theme_bw() +
+  ggtitle(" <b> Invers roots model 1 <b>") +
+  theme(plot.title = element_text(hjust = 0.5)))
+f21
+```
+
+
+
+Due to the roots being larger than 1, model is invertible, it is also causal 
+because for MA all roots for phi are smaller than 1.
+
+
+Since Model mod_2 is an MA(6), it can be expressed as 1/((1-phiB)+(1-phiB^2)
+
+```{r}
+ma_coeffs <- mod_2$coef[1:6]
+
+p <- c(1, ma_coeffs)
+
+# Find the roots of the polynomial
+roots <- polyroot(p)
+
+# Print the roots
+roots
+```
+```{r}
+sqrt(0.750677^2+1.038592^2)
+
+sqrt(0.535451^2+1.430961^2)
+
+sqrt(0.750677^2+1.038592^2)
+
+sqrt(-0.535451^2+1.430961^2)
+```
+
+Due to the roots being larger than 1, model is invertible, it is also causal 
+because for MA all roots for phi are smaller than 1.
+
+```{r}
+
+f22 = ggplotly(autoplot(mod_2) +
+  geom_point(color="#440154", fill='#414487', shape=21, size=1) +
+  theme_bw() +
+  ggtitle(" <b> Invers roots model 2 <b>") +
+  theme(plot.title = element_text(hjust = 0.5)))
+f22
+```
+
+## Stability 
+
+To determine the most suitable model between the two, we reserve the last 12 
+data observations and retrain one of the models without them. Following this, 
+we use the retrained model to make predictions for these 12 observations, 
+providing a confidence interval for each prediction. Finally, we compare these 
+predicted values to the actual values, which were initially set aside for this 
+purpose.
+
+### Model 1
+
+Overall, the models can be considered stable as the signs and magnitudes of the 
+coefficients are similar, and the significance levels have not changed 
+drastically.
+
+```{r}
+ultim <- c(2018, 12)
+
+pdq=c(0,1,2)
+PDQ=c(4,1,0)
+
+complete <- window(metro, end = ultim + c(1, 0))
+train <- window(metro, end = ultim)
+
+(mod1_complete <- arima(complete, order = pdq, seasonal = list(order = PDQ, 
+                                                         period = 12)))
+(mod1_train <- arima(train, order = pdq, seasonal = list(order = PDQ, 
+                                                         period = 12)))
+
+```
+
+
+### Model 2
+
+Overall, the models display consistent signs and magnitudes of coefficients and
+a similar level of significance, indicating stability between the models.
+
+```{r}
+pdq=c(0,1,6)
+PDQ=c(4,1,0)
+
+(mod2_complete=arima(complete,order=pdq,seasonal=list(order=PDQ,period=12),
+                 fixed = c(NA,NA,0,NA,0,NA,NA,NA,NA,NA)))
+(mod2_train=arima(train,order=pdq,seasonal=list(order=PDQ,period=12),
+                 fixed = c(NA,NA,0,NA,0,NA,NA,NA,NA,NA)))
+
+```
+
+## Predictive power
+
+Next, we carry out out-of-sample predictions with the acquired models to assess 
+their accuracy in predicting data from last year.
+
+### Model 1
+
+```{r}
+pred1 <- predict(mod1_train, n.ahead = 12)
+
+pr <- pred1$pred
+obs <- window(metro, start = ultim)
+mod.RMSE1 <- sqrt(sum((obs - pr)^2) / 12)
+mod.MAE1 <- sum(abs(obs - pr)) / 12
+mod.RMSPE1 <- sqrt(sum(((obs - pr) / obs)^2) / 12)
+mod.MAPE1 <- sum(abs(obs - pr) / obs) / 12
+mod1.meanCI <- 1.96 * 2 * mean(pred1$se)
+
+(mod1.stats <- data.frame("RMSE" = mod.RMSE1, "RMSPE" = mod.RMSPE1, 
+                          "MAE" = mod.MAE1, 
+                          "MAPE" = mod.MAPE1,
+                          "mean CI" = mod1.meanCI)) %>%
+    kable(booktabs = TRUE, caption = "Model 1 metrics")
+
+```
+
+
+```{r}
+df <- tibble(passengers = metro, date = time(metro))
+dfpred1 <- tibble(passengers = pred1$pred, date = time(pred1$pred), 
+                  se = pred1$se)
+
+lst <- tail(train, 1)
+dfpred1 %>%
+    add_row(
+        tibble_row(
+            passengers = as.numeric(lst), date = time(lst),
+            se = 0
+        ),
+        .before = 1
+    ) %>%
+    ggplot(aes(x = date, y = passengers)) +
+    geom_line(data = df) +
+    geom_point(data = df) +
+    geom_line(color = 2) +
+    geom_point(color = 2) +
+    geom_line(aes(y = passengers + 1.96 * se), linetype = "dashed", color = 2) +
+    geom_line(aes(y = passengers - 1.96 * se), linetype = "dashed", color = 2) +
+    labs(
+        title = "Predictions of model 1",
+        x = "Time",
+        y = "Passengers"
+    ) +
+    lims(x = c(2017, NA))
+
+
+``` 
+
+### Model 2
+
+```{r}
+pred2 <- predict(mod2_train, n.ahead = 12)
+
+pr <- pred2$pred
+obs <- window(metro, start = ultim)
+mod.RMSE1 <- sqrt(sum((obs - pr)^2) / 12)
+mod.MAE1 <- sum(abs(obs - pr)) / 12
+mod.RMSPE1 <- sqrt(sum(((obs - pr) / obs)^2) / 12)
+mod.MAPE1 <- sum(abs(obs - pr) / obs) / 12
+mod2.meanCI <- 1.96 * 2 * mean(pred2$se)
+
+(mod2.stats <- data.frame("RMSE" = mod.RMSE1, "RMSPE" = mod.RMSPE1, 
+                          "MAE" = mod.MAE1, "MAPE" = mod.MAPE1,
+                          "mean CI" = mod2.meanCI)) %>%
+    kable(booktabs = TRUE, caption="Model 2 metrics")
+
+```
+
+
+```{r}
+df <- tibble(passengers = metro, date = time(metro))
+dfpred2 <- tibble(passengers = pred2$pred, date = time(pred2$pred), 
+                  se = pred2$se)
+
+lst <- tail(train, 1)
+dfpred2 %>%
+    add_row(
+        tibble_row(
+            passengers = as.numeric(lst), date = time(lst),
+            se = 0
+        ),
+        .before = 1
+    ) %>%
+    ggplot(aes(x = date, y = passengers)) +
+    geom_line(data = df) +
+    geom_point(data = df) +
+    geom_line(color = 2) +
+    geom_point(color = 2) +
+    geom_line(aes(y = passengers + 1.96 * se), linetype = "dashed", color = 2) +
+    geom_line(aes(y = passengers - 1.96 * se), linetype = "dashed", color = 2) +
+    labs(
+        title = "Predictions of model 2",
+        x = "Time",
+        y = "Passengers"
+    ) +
+    lims(x = c(2017, NA))
+
+
+```
+
+
+Based on the metrics provided for Model 1 and Model 2:
+
+RMSE (Root Mean Squared Error): Model 2 has a lower RMSE than Model 1 (1384.55 
+compared to 1541.137), indicating that Model 2 has a better fit in terms of 
+the magnitude of errors.
+RMSPE (Root Mean Squared Percentage Error): Model 2 also has a lower RMSPE than 
+Model 1 (0.0474867 compared to 0.0536584), which means that Model 2 has smaller 
+error percentages relative to the actual values.
+MAE (Mean Absolute Error): Again, Model 2 performs better with a lower MAE 
+(1101.47 compared to 1148.807), suggesting that, on average, the forecasts of 
+Model 2 are closer to the actual values.
+MAPE (Mean Absolute Percentage Error): Model 2 has a lower MAPE (0.0347239 
+compared to 0.0368677), indicating that Model 2's predictions are, in terms of 
+percentage, closer to the actual values.
+Mean CI (Mean Confidence Interval): The mean confidence interval for Model 2 is 
+narrower (5317.951 compared to 5780.784), which suggests that Model 2 is more 
+certain about its forecasts.
+
+## Best model
+
+Taking all the previous metrics into account and all the previous analysis made,
+Model 2 appears to be the better model as it has lower errors both in absolute 
+terms and relative to the scale of the data (as indicated by the percentage 
+errors), and it provides a more confident forecast range.
+
+
+# Prediction
+
+Next, we will predict the data for the next year (the next 12 months):
+
+```{r}
+pred=predict(mod2_complete,n.ahead=12)
+ultim = c(2019,12)
+
+
+pr<-ts(c(tail(complete,1),pred$pred),start=ultim,freq=12)
+se<-ts(c(0,pred$se),start=ultim,freq=12)
+
+
+#Intervals
+tl<-ts(pr-1.96*se,start=ultim,freq=12)
+tu<-ts(pr+1.96*se,start=ultim,freq=12)
+pr<-ts(pr,start=ultim,freq=12)
+
+
+ts.plot(complete,tl,tu,pr,lty=c(1,2,2,1),col=c(1,4,4,2),xlim=ultim[1]+c(-2,+2),
+        type="o",main=paste("Model ARIMA(",paste(pdq,collapse=","),")
+                            (",paste(PDQ,collapse=","),")12",sep=""))
+abline(v=(ultim[1]-2):(ultim[1]+2),lty=3,col=4)
+
+
+```
+
+
+```{r}
+(previs=window(cbind(tl,pr,tu),start=ultim))
+```

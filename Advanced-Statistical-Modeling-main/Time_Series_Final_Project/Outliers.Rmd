@@ -1,0 +1,449 @@
+---
+title: "Time Series"
+output: pdf_document
+date: '2023-12-21'
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+# Outliers and calendar effect
+
+```{r}
+library(tseries)
+library(tidyverse)
+library(forecast)
+library(patchwork)
+```
+
+```{r cars}
+# Load data 
+(metro=ts(read.table("metro.dat"),start=1996,freq=12))
+```
+
+Load the functions provided by the professor.
+
+```{r}
+source("atipics2.r")
+source("CalendarEffects.r")
+source("validation.r")
+```
+
+```{r}
+pdq=c(0,1,6)
+PDQ=c(4,1,0)
+
+(mod2 = arima(metro,order=pdq,seasonal=list(order=PDQ,period=12),
+              fixed = c(NA,NA,0,NA,0,NA,NA,NA,NA,NA)))
+
+d1d12metro=diff(diff(metro,12))
+
+data=c(start(metro)[1],start(metro)[2], length(metro))
+
+(TradDays=Wtrad(data))
+(Eastw=Weaster(data))
+```
+
+```{r}
+(mod2TD=arima(metro,order=pdq,seasonal=list(order=PDQ,period=12),
+              fixed = c(NA,NA,0,NA,0,NA,NA,NA,NA,NA,NA),xreg=TradDays))
+(mod2Ew=arima(metro,order=pdq,seasonal=list(order=PDQ,period=12),
+              fixed = c(NA,NA,0,NA,0,NA,NA,NA,NA,NA,NA),xreg=Eastw))
+(mod2CE=arima(metro,order=pdq,seasonal=list(order=PDQ,period=12),
+              fixed = c(NA,NA,0,NA,0,NA,NA,NA,NA,NA,NA,NA),
+              xreg=data.frame(TradDays,Eastw)))
+```
+
+Improvement of the aic upon taking into account the Easter week and the trading
+days. Model including Easter week and trading days proceeds upon further 
+validation.
+
+#Validation
+
+```{r}
+EfecTD=coef(mod2CE)["TradDays"]*TradDays
+EfecEw=coef(mod2CE)["Eastw"]*Eastw
+metroCE=metro-EfecTD-EfecEw
+
+d1d12metroCE=diff(diff(metroCE,12))
+```
+
+```{r}
+plot(EfecTD+EfecEw)
+plot(metroCE)
+plot(metro)
+```
+Removing the Easter week and trade days effects seems to remove some of the 
+peaks it had, making for smoother predictions.
+
+```{r}
+validation(mod2, d1d12metro)
+```
+
+
+```{r}
+validation(mod2CE, d1d12metroCE)
+```
+
+Comparing the results of the validation obtained for the model that takes into 
+account the Easter week and the trade days against the original model are 
+similar, but some improvements can be observed.
+
+For starters, the square root of absolute residuals show a flatter line, 
+indicating constant variance for the residuals.
+
+The ACF/PACF plots show less lags outside the confidence bands, showing an 
+improvement over the lack of autocorrelation of the points.
+
+The most notable improvement would be for the normality tests, which the 
+new model manages to not reject any of the null hypothesis and confirming the 
+residuals have a normal distribution unlike the original model.
+
+After observing these changes, we can confirm the model has the residuals 
+normally distributed, with constant variance and are independent.
+
+#Calendar effects+ outliers
+
+```{r}
+# automatic detection of outliers with crit=2.8 and LS =TRUE
+mod.atip=outdetec(mod2CE,dif=c(1,12),crit=2.8,LS=T) 
+
+#Estimated residual variance before and after outliers detection and treatment
+mod2CE$sigma
+mod.atip$sigma
+```
+
+#### Table with detected outliers, their types, magnitud, statistic values and chronology and percentage of variation (relative since in log scale)
+
+```{r}
+atipics=mod.atip$atip[order(mod.atip$atip[,1]),]
+meses=c("Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic")
+
+data.frame(atipics,Fecha=paste(meses[(atipics[,1]-1)%%12+1],
+                               start(metro)[1]+((atipics[,1]-1)%/%12)),
+           perc.Obs=exp(atipics[,3])*100)
+```
+
+For the observation 73 on January 2002, 77 on May 2002, 116 on August 2005 and 
+149 on May 2008 additive outliers are detected. Not much information has been 
+found of the possible causes of these outliers except for May 2008, where the 
+biggest torrential rain can be registered on that month.
+For January 2002 maybe the fact that the euro was introduced had an effect on
+metro passengers.The transition to a new currency can affect economic activity 
+and consumer behavior, as people may temporarily reduce their spending or change
+their travel habits due to uncertainty about prices and the new currency. 
+Additionally, any logistical challenges during the transition period could have 
+influenced the ease of travel and commuting, potentially affecting passenger 
+numbers.
+In October 2017, a negative Additive Outlier (AO) was observed, which might be 
+attributed to the aftermath of the terrorist attack that occurred in Las 
+Ramblas, Barcelona, in mid-August 2017. The incident's lingering impact could 
+have led to heightened apprehension among the public, resulting in fewer outings
+and, consequently, a reduction in metro usage during that period.
+
+No information about what might have happened for the levels shifts was found. 
+Observation 25 on January 1998 presents a positive level shift that affect all 
+the future values. Another positive level shift happens for observation 59 on 
+November 2000 and a negative shift for observation 157 on January 2009. Also, a 
+positive level shift occurs in March 2012
+
+There are negative transitory changes for observations 34 October 1998, 40 April
+1999 and 165 September 2009. No information was found about the possible causes 
+of these changes.
+
+# Comparing observed series with linearized (without outliers) series
+
+
+```{r}
+metro.lin=lineal(metro,mod.atip$atip)
+
+plot(metro.lin,col=2)
+lines(metro, col=1)
+```
+Looking at the data, the effects of the level shifts are quite noticeable, the 
+original data being above the data without the outliers for the most part due 
+to the level shift on January 1998, further increasing the difference with the 
+positive level shift on November 2000. After the level shift down that happens 
+on January 2009 the original data and the data without outliers again have a 
+similar patterns, the original one ending up slightly above the one without 
+outliers.
+
+# Identifying model for data without outliers
+
+```{r}
+d1d12metro.lin=diff(diff(metro.lin,12))
+par(mfrow=c(1,2))
+acf(d1d12metro.lin,ylim=c(-1,1),lag.max=72,col=c(2,rep(1,11)),lwd=2)
+pacf(d1d12metro.lin,ylim=c(-1,1),lag.max=72,col=c(rep(1,11),2),lwd=2)
+par(mfrow=c(1,1))
+
+
+```
+A few new models can be identified looking at the lags near the origin outside 
+the confidence bands of the ACF/PACF plots, one of them being an 
+ARIMA model (0,0,7), another an ARMA(3,0,0) and an ARMA(5,0,0), with the 
+possible seasonal components being (0,0,6) and (3,0,0). Seasonal component 
+(4,0,0) and ARMA model (0,0,6) are also considered due to the original model.
+
+
+```{r}
+#Original model was also tested
+(mod.lin1_1 = arima(d1d12metro.lin,order=c(0,0,6),
+                    seasonal=list(order=c(4,0,0),period=12)))
+(mod.lin1_2 = arima(d1d12metro.lin,order=c(0,0,6),
+                    seasonal=list(order=c(3,0,0),period=12)))
+(mod.lin1_3 = arima(d1d12metro.lin,order=c(0,0,6),
+                    seasonal=list(order=c(0,0,6),period=12)))
+```
+
+```{r}
+(mod.lin2_1 = arima(d1d12metro.lin,order=c(0,0,7),
+                    seasonal=list(order=c(4,0,0),period=12)))
+(mod.lin2_2 = arima(d1d12metro.lin,order=c(0,0,7),
+                    seasonal=list(order=c(3,0,0),period=12)))
+(mod.lin2_3 = arima(d1d12metro.lin,order=c(0,0,7),
+                    seasonal=list(order=c(0,0,6),period=12)))
+```
+
+```{r}
+#(mod.lin3_1 = arima(d1d12metro.lin,order=c(3,0,0),seasonal=list(order=c(4,0,0),period=12))) #Gives error
+#(mod.lin3_2 = arima(d1d12metro.lin,order=c(3,0,0),seasonal=list(order=c(3,0,0),period=12)))
+(mod.lin3_3 = arima(d1d12metro.lin,order=c(3,0,0),
+                    seasonal=list(order=c(0,0,6),period=12)))
+```
+
+```{r}
+(mod.lin4_1 = arima(d1d12metro.lin,order=c(5,0,0),
+                    seasonal=list(order=c(4,0,0),period=12)))
+(mod.lin4_2 = arima(d1d12metro.lin,order=c(5,0,0),
+                    seasonal=list(order=c(3,0,0),period=12)))
+(mod.lin4_3 = arima(d1d12metro.lin,order=c(5,0,0),
+                    seasonal=list(order=c(0,0,6),period=12)))
+```
+
+```{r}
+cat("\nT-ratios:", round(mod.lin1_1$coef/sqrt(diag(mod.lin1_1$var.coef)),2))
+cat("\nT-ratios:", round(mod.lin2_1$coef/sqrt(diag(mod.lin2_1$var.coef)),2))
+cat("\nT-ratios:", round(mod.lin4_1$coef/sqrt(diag(mod.lin4_1$var.coef)),2))
+```
+Looking at the significant values, the intercept is not significant for any 
+of the models and models 1 and 2 will end up as the original one.
+Thus, we remove some of the not significant values ( we stoppped removing when
+we started getting worst AIC values).
+
+```{r}
+(mod.lin = arima(d1d12metro.lin,order=c(0,0,6),
+                 seasonal=list(order=c(4,0,0),period=12),
+                 fixed = c(NA,NA,0,NA,0,NA,NA,NA,NA,NA,NA)))
+```
+
+
+```{r}
+(mod.lin2 = arima(metro.lin,order=c(0,1,6),
+                  seasonal=list(order=c(4,1,0),period=12),
+                  fixed = c(NA,NA,0,NA,0,NA,NA,NA,NA,NA)))
+```
+Noe lets take into account the Easter week and trade days. We obtain a better
+AIC.
+
+```{r}
+(mod.lin2 = arima(metro.lin,order=c(0,1,6),
+                  seasonal=list(order=c(4,1,0),period=12),
+                  fixed = c(NA,NA,0,NA,0,NA,NA,NA,NA,NA,NA,NA),
+                  xreg=data.frame(TradDays,Eastw)))
+```
+
+Lets see if the model is invertible and causal.
+
+```{r}
+ma_coeffs <- mod.lin2$coef[1:7]
+
+p <- c(1, ma_coeffs)
+
+# Find the roots of the polynomial
+roots <- polyroot(p)
+
+# Print the roots
+roots
+```
+
+Due to not all the roots being larger than 1, model is not invertible. 
+It is causal because for MA all roots for phi are smaller than 1.
+
+```{r}
+(mod.lin3 = arima(d1d12metro.lin,order=c(5,0,0),
+                  seasonal=list(order=c(4,0,0),period=12)))
+
+```
+
+```{r}
+(mod.lin3 = arima(metro.lin,order=c(5,1,0),
+                  seasonal=list(order=c(4,1,0),period=12)))
+
+```
+Lets try taking into account the Easter week and the trade days. We obtain a 
+much better AIC when doing so.
+
+```{r}
+(mod.lin3 = arima(metro.lin,order=c(5,1,0),
+                  seasonal=list(order=c(4,1,0),period=12),
+                  xreg=data.frame(TradDays,Eastw)))
+
+```
+Lets check if the model is invertible and causal.
+
+```{r}
+ma_coeffs <- mod.lin3$coef[1:2]
+
+p <- c(1, ma_coeffs)
+
+# Find the roots of the polynomial
+roots <- polyroot(p)
+
+# Print the roots
+roots
+```
+
+Due to the absolute value of all the roots being larger than 1, model is causal,
+it is also invertible because for AR all roots for theta are smaller than 1.
+
+## Validation
+
+Now,lets validate the models.
+
+```{r}
+validation(mod.lin2,d1d12metro.lin)
+```
+
+
+```{r}
+validation(mod.lin3,d1d12metro.lin)
+```
+
+To pass the Ljung-Box test we decided to try model.lin2 while keeping all 
+coefficients ( we have removed some of them before).
+
+```{r}
+(mod.lin4 = arima(metro.lin,order=c(0,1,6),
+                  seasonal=list(order=c(4,1,0),period=12),
+                  xreg=data.frame(TradDays,Eastw)))
+```
+
+```{r}
+validation(mod.lin4,d1d12metro.lin)
+```
+
+We can see that if we keep all the coefficients in model.lin2 now the model pass
+the Ljung-Box test and that the AIC is just one point worst than before.
+
+#Forecast
+
+We use the same procedure as we did before. First we check if the model is
+stable.
+
+```{r}
+pdq=c(0,1,6)
+PDQ=c(4,1,0)
+ultim = c(2018,12)
+
+train=window(metro.lin,end=ultim)
+complete = window(metro.lin)
+
+TradDays2=window(TradDays,end=ultim)
+Eastw2=window(Eastw,end=ultim)
+
+(mod1=arima(train,order=pdq,seasonal=list(order=PDQ,period=12),
+            xreg=data.frame(TradDays2,Eastw2)))
+(mod2=arima(complete,order=pdq,seasonal=list(order=PDQ,period=12),
+            xreg=data.frame(TradDays,Eastw)))
+```
+
+From the results, we can see that the model is stable, coefficients for both 
+models are similar in significance, sign and magnitude, meaning the correlation 
+structure has not changed and the complete series can be used for predictions 
+reliably.
+
+
+Now we check for predictive power (same procedure as before).
+
+```{r}
+pred=predict(mod1,n.ahead=12,newxreg=window(cbind(TradDays,Eastw),
+                                            start=c(ultim[1]+1,1)))
+
+
+pr<-ts(c(tail(train,1),pred$pred),start=ultim,freq=12)
+se<-ts(c(0,pred$se),start=ultim,freq=12)
+
+
+#Intervals
+tl<-ts(pr-1.96*se,start=ultim,freq=12)
+tu<-ts(pr+1.96*se,start=ultim,freq=12)
+pr<-ts(pr,start=ultim,freq=12)
+
+
+ts.plot(metro,tl,tu,pr,lty=c(1,2,2,1),col=c(1,4,4,2),xlim=ultim[1]+c(-2,+2),
+        type="o",main=paste("Model ARIMA(",paste(pdq,collapse=","),")
+                            (",paste(PDQ,collapse=","),")12",sep=""))
+abline(v=(ultim[1]-2):(ultim[1]+2),lty=3,col=4)
+```
+
+
+Predicted data seems to follow the same pattern as the observed data, with the 
+observed data being inside the confidence intervals.
+
+
+```{r}
+obs=window(metro,start=ultim+c(0,1))
+pr=window(pr,start=ultim+c(0,1))
+ts(data.frame(LowLim=tl[-1],Predic=pr,UpperLim=tu[-1],Observ=obs,Error=obs-pr,
+              PercentError=(obs-pr)/obs),start=ultim+c(0,1),freq=12)
+mod.RMSE1=sqrt(sum((obs-pr)^2)/12)
+mod.MAE1=sum(abs(obs-pr))/12
+mod.RMSPE1=sqrt(sum(((obs-pr)/obs)^2)/12)
+mod.MAPE1=sum(abs(obs-pr)/obs)/12
+
+data.frame("RMSE"=mod.RMSE1,"MAE"=mod.MAE1,"RMSPE"=mod.RMSPE1,"MAPE"=mod.MAPE1)
+
+mCI1=mean(tu-tl)
+
+cat("\nMean Length CI: ",mCI1)
+```
+
+Root mean square percentage error and mean absolute percentage error are below 
+5%, obtaining quite good predictions and the mean of the confidence intervals
+is 3340.301. The results obtained show an improvement over the original model.
+
+Finally we look at the predictions.
+
+
+```{r}
+pred=predict(mod2,n.ahead=12,newxreg=window(cbind(TradDays,Eastw),
+                                            start=c(ultim[1]+1,1)))
+ultim = c(2019,12)
+
+
+pr<-ts(c(tail(complete,1),pred$pred),start=ultim,freq=12)
+se<-ts(c(0,pred$se),start=ultim,freq=12)
+
+
+#Intervals
+tl<-ts(pr-1.96*se,start=ultim,freq=12)
+tu<-ts(pr+1.96*se,start=ultim,freq=12)
+pr<-ts(pr,start=ultim,freq=12)
+
+
+ts.plot(complete,tl,tu,pr,lty=c(1,2,2,1),col=c(1,4,4,2),xlim=ultim[1]+c(-2,+2),
+        type="o",main=paste("Model ARIMA(",paste(pdq,collapse=","),")
+                            (",paste(PDQ,collapse=","),")12",sep=""))
+abline(v=(ultim[1]-2):(ultim[1]+2),lty=3,col=4)
+
+
+```
+
+```{r}
+(previs=window(cbind(tl,pr,tu),start=ultim))
+```
