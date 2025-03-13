@@ -1,0 +1,144 @@
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+<http://example.org/Area> a rdfs:Class .
+
+<http://example.org/Author> a rdfs:Class ;
+    rdfs:subClassOf <http://example.org/Person> .
+
+<http://example.org/Chair> a rdfs:Class ;
+    rdfs:subClassOf <http://example.org/Handler> .
+
+<http://example.org/Conference> a rdfs:Class ;
+    rdfs:subClassOf <http://example.org/Venue> .
+
+<http://example.org/Demo_paper> a rdfs:Class ;
+    rdfs:subClassOf <http://example.org/Paper> .
+
+<http://example.org/Editor> a rdfs:Class ;
+    rdfs:subClassOf <http://example.org/Handler> .
+
+<http://example.org/Expert_group> a rdfs:Class ;
+    rdfs:subClassOf <http://example.org/Conference> .
+
+<http://example.org/Full_paper> a rdfs:Class ;
+    rdfs:subClassOf <http://example.org/Paper> .
+
+<http://example.org/Handler> a rdfs:Class ;
+    rdfs:subClassOf <http://example.org/Person> .
+
+<http://example.org/Journal> a rdfs:Class ;
+    rdfs:subClassOf <http://example.org/Venue> .
+
+<http://example.org/Paper> a rdfs:Class .
+
+<http://example.org/Person> a rdfs:Class .
+
+<http://example.org/Poster_paper> a rdfs:Class ;
+    rdfs:subClassOf <http://example.org/Paper> .
+
+<http://example.org/Proceeding> a rdfs:Class ;
+    rdfs:subClassOf <http://example.org/Publication> .
+
+<http://example.org/Publication> a rdfs:Class .
+
+<http://example.org/Regular_conference> a rdfs:Class ;
+    rdfs:subClassOf <http://example.org/Conference> .
+
+<http://example.org/Reviewer> a rdfs:Class ;
+    rdfs:subClassOf <http://example.org/Person> .
+
+<http://example.org/Revision> a rdfs:Class .
+
+<http://example.org/Short_paper> a rdfs:Class ;
+    rdfs:subClassOf <http://example.org/Paper> .
+
+<http://example.org/Submission> a rdfs:Class .
+
+<http://example.org/Symposium> a rdfs:Class ;
+    rdfs:subClassOf <http://example.org/Conference> .
+
+<http://example.org/Venue> a rdfs:Class .
+
+<http://example.org/Volume> a rdfs:Class ;
+    rdfs:subClassOf <http://example.org/Publication> .
+
+<http://example.org/Workshop> a rdfs:Class ;
+    rdfs:subClassOf <http://example.org/Conference> .
+
+<http://example.org/accepted> a rdf:Property ;
+    rdfs:domain <http://example.org/Submission> ;
+    rdfs:range rdfs:Literal .
+
+<http://example.org/decision> a rdf:Property ;
+    rdfs:domain <http://example.org/Revision> ;
+    rdfs:range rdfs:Literal .
+
+<http://example.org/does> a rdf:Property ;
+    rdfs:domain <http://example.org/Reviewer> ;
+    rdfs:range <http://example.org/Revision> .
+
+<http://example.org/goesThrough> a rdf:Property ;
+    rdfs:domain <http://example.org/Submission> ;
+    rdfs:range <http://example.org/Revision> .
+
+<http://example.org/handles> a rdf:Property ;
+    rdfs:domain <http://example.org/Handler> ;
+    rdfs:range <http://example.org/Submission> .
+
+<http://example.org/includedIn> a rdf:Property ;
+    rdfs:domain <http://example.org/Paper> ;
+    rdfs:range <http://example.org/Publication> .
+
+<http://example.org/paperRelatedTo> a rdf:Property ;
+    rdfs:domain <http://example.org/Paper> ;
+    rdfs:range <http://example.org/Area> .
+
+<http://example.org/paperTitle> a rdf:Property ;
+    rdfs:domain <http://example.org/Paper> ;
+    rdfs:range rdfs:Literal .
+
+<http://example.org/personName> a rdf:Property ;
+    rdfs:domain <http://example.org/Person> ;
+    rdfs:range rdfs:Literal .
+
+<http://example.org/presentedAt> a rdf:Property ;
+    rdfs:domain <http://example.org/Submission> ;
+    rdfs:range <http://example.org/Venue> .
+
+<http://example.org/publicationYear> a rdf:Property ;
+    rdfs:domain <http://example.org/Publication> ;
+    rdfs:range rdfs:Literal .
+
+<http://example.org/publishes> a rdf:Property ;
+    rdfs:domain <http://example.org/Venue> ;
+    rdfs:range <http://example.org/Publication> .
+
+<http://example.org/reviewText> a rdf:Property ;
+    rdfs:domain <http://example.org/Revision> ;
+    rdfs:range rdfs:Literal .
+
+<http://example.org/submittedTo> a rdf:Property ;
+    rdfs:domain <http://example.org/Paper> ;
+    rdfs:range <http://example.org/Submission> .
+
+<http://example.org/topic> a rdf:Property ;
+    rdfs:domain <http://example.org/Area> ;
+    rdfs:range rdfs:Literal .
+
+<http://example.org/venueName> a rdf:Property ;
+    rdfs:domain <http://example.org/Venue> ;
+    rdfs:range rdfs:Literal .
+
+<http://example.org/venueRelatedTo> a rdf:Property ;
+    rdfs:domain <http://example.org/Venue> ;
+    rdfs:range <http://example.org/Area> .
+
+<http://example.org/volumeNumber> a rdf:Property ;
+    rdfs:domain <http://example.org/Volume> ;
+    rdfs:range rdfs:Literal .
+
+<http://example.org/writes> a rdf:Property ;
+    rdfs:domain <http://example.org/Author> ;
+    rdfs:range <http://example.org/Paper> .
+
